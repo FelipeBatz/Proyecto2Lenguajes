@@ -20,13 +20,9 @@ public class PruebaJflex {
         String ruta = "C:/Users/felip/OneDrive/Escritorio/correcto.pz";
 
         try {
-
             Reader reader = new FileReader(ruta);
-
             AnalizadorLexico analizador = new AnalizadorLexico(reader);
-
             Token tokenActual;
-
             while ((tokenActual = analizador.yylex()) != null) {
 
                 tokensReconocidos.agregarNuevo(tokenActual);

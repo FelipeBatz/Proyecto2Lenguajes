@@ -8,7 +8,7 @@ package Backend;
  *
  * @author felip
  */
-class ListaEnlazadaException extends Exception {
+public class ListaEnlazadaException extends Exception {
     public ListaEnlazadaException(String message) {
         super(message);
     }
