@@ -34,18 +34,12 @@ ESPACIO = [ \t\n\r]+
 
 LETRAS = [a-zA-Z]
 DIGITOS = [0-9]
-OPERADORES = "+" | "="
-DELIMITADORES = "(" | ")" | "{" | "}"
+
 FLECHA = "->"
-FUNCIONES = "CARGAR"
 DIRECTIVAS = "@modelo" | "@rol" | "@formato"
-PALABRAS_RESERVADAS = "AGENTE" | "contexto" | "variable" | "EJECUTAR" | "EXPORTAR"
 COMANDOS_IA = "PREGUNTAR" | "GENERAR" | "RESUMIR" | "ANALIZAR" | "TRADUCIR" | "CLASIFICAR" | "EXTRAER"
 CONECTORES = "SOBRE" | "DESDE" | "EN" | "COMO"
-
-
-
-Identificador = ({LETRAS}|"_")({LETRAS}|"_"|{DIGITOS})*
+ID = ({LETRAS}|"_")({LETRAS}|"_"|{DIGITOS})*
 Numero = {DIGITOS}+
 NumeroDecimal = {DIGITOS}+ "." {DIGITOS}+
 comentarioDeLinea = "//" .*
@@ -73,9 +67,9 @@ comentarioDeLinea = "//" .*
         yybegin(comentarioDeBloque);
         
     }
-    
+
     {comentarioDeLinea} {
-        return crearToken("Comentario");
+        return crearToken("COMENTARIO");
     }
 
     //-----------------------------Deteccion de cadenas---------------------------
@@ -86,61 +80,89 @@ comentarioDeLinea = "//" .*
         yybegin(cadena);
     }
 
-    //-----------------------------Deteccion de operadores---------------------------
-    {OPERADORES} {
-        return crearToken("Operador");
-    }
-
-    //-----------------------------Deteccion de Delimitadores---------------------------
-    {DELIMITADORES} {
-        return crearToken("Delimitador");
-    }
-
+    
     //-----------------------------Deteccion de numeros---------------------------
     {Numero} {
-        return crearToken("Numero");
+        return crearToken("NUMERO");
     }
 
     {NumeroDecimal} {
-        return crearToken("Decimal");
+        return crearToken("NUMERO");
 
-    }
-
-
-    
-
-    {FUNCIONES} {
-        return crearToken("Funcion");
     }
 
     {DIRECTIVAS} {
-        return crearToken("Directiva");
+        return crearToken("DIRECTIVA");
     }
 
-    {PALABRAS_RESERVADAS} {
-        return crearToken("Palabra Reservada");
+    "AGENTE" {
+        return crearToken("AGENTE");
+    }
+
+    "contexto" {
+        return crearToken("CONTEXTO");
+    }
+
+    "variable" {
+        return crearToken("VARIABLE");
+    }
+
+    "EJECUTAR" {
+        return crearToken("EJECUTAR");
+    }
+
+    "EXPORTAR" {
+        return crearToken("EXPORTAR");
     }
 
     {COMANDOS_IA} {
-        return crearToken("Comando de IA");
+        return crearToken("COMANDO_IA");
+    }
+
+    "CARGAR" {
+        return crearToken("CARGAR");
     }
 
     {CONECTORES} {
-        return crearToken("Conector");
-    }
-
-    {FLECHA} {
-        return crearToken("Flecha");
+        return crearToken("CONECTOR");
     }
 
     //-----------------------------Deteccion de Identificadores---------------------------
-    {Identificador} {
-        return crearToken("Identificador");
+    {ID} {
+        return crearToken("ID");
     }
 
-    
-    
+    {FLECHA} {
+        return crearToken("FLECHA");
+    }
 
+    "=" {
+        return crearToken("IGUAL");
+    }
+
+    "+" {
+        return crearToken("MAS");
+    }
+
+    "{" {
+        return crearToken("LLAVE_A");
+    }
+
+    "}" {
+        return crearToken("LLAVE_C");
+    }
+
+    "(" {
+        return crearToken("PAR_A");
+    }
+
+    ")" {
+        return crearToken("PAR_C");
+    }
+
+    "," {
+        return crearToken("COMA");
+    }
     
 }
 
@@ -149,7 +171,7 @@ comentarioDeLinea = "//" .*
 <cadena> "\"" {
     cadenaCompleta.append(yytext());
     noTokens++;
-    Token token = new Token(noTokens, cadenaCompleta.toString(), "Cadena", yyline + 1, columnaCadena);
+    Token token = new Token(noTokens, cadenaCompleta.toString(), "CADENA", yyline + 1, columnaCadena);
     yybegin(YYINITIAL);
     return token;
     
@@ -169,7 +191,7 @@ comentarioDeLinea = "//" .*
 <comentarioDeBloque> "*/" {
     comentario.append(yytext());
     noTokens++;
-    Token token = new Token(noTokens, comentario.toString(), "Comentario", yyline + 1, columnaComentario);
+    Token token = new Token(noTokens, comentario.toString(), "COMENTARIO", yyline + 1, columnaComentario);
     yybegin(YYINITIAL);
     return token;
 }
@@ -189,3 +211,4 @@ comentarioDeLinea = "//" .*
     System.out.println("Error detectado: " + yytext());
     return crearToken("caracter no reconocido");
 }
+
