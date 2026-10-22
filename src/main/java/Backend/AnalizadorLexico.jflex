@@ -2,7 +2,7 @@ package Backend;
 import Backend.Token;
 
 %%
-
+%public
 %class AnalizadorLexico
 %unicode
 %line

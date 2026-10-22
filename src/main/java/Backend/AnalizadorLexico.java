@@ -7,7 +7,7 @@ import Backend.Token;
 
 
 @SuppressWarnings("fallthrough")
-class AnalizadorLexico {
+public class AnalizadorLexico {
 
   /** This character denotes the end of file. */
   public static final int YYEOF = -1;
@@ -400,7 +400,7 @@ class AnalizadorLexico {
    *
    * @param   in  the java.io.Reader to read input from.
    */
-  AnalizadorLexico(java.io.Reader in) {
+  public AnalizadorLexico(java.io.Reader in) {
     this.zzReader = in;
   }
 
