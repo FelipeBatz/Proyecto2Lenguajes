@@ -1,6 +1,7 @@
 package Frontent;
 
 import Backend.AnalizadorLexico;
+import Backend.Colorear;
 import Backend.ListaEnlazada;
 import Backend.ListaEnlazadaException;
 import Backend.Token;
@@ -8,16 +9,18 @@ import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
-import javax.swing.plaf.basic.BasicTabbedPaneUI;
 import java.awt.*;
 import java.awt.event.*;
 import java.io.File;
-import java.io.FileReader;
 import java.io.IOException;
 import java.io.Reader;
 import java.io.StringReader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import javax.swing.text.BadLocationException;
+import javax.swing.text.Style;
+import javax.swing.text.StyleConstants;
+import javax.swing.text.StyledDocument;
 
 public class IDE2 extends JFrame {
 
@@ -32,7 +35,6 @@ public class IDE2 extends JFrame {
     private static final Color COLOR_VERDE = new Color(45, 125, 75);
     private static final Color COLOR_MORADO = new Color(85, 70, 145);
     private static final Color COLOR_BLANCO = new Color(255, 255, 255);
-    private static final Color COLOR_ROJO = new Color(160, 55, 55);
 
     private JTextPane editor;
     private JTextArea consola;
@@ -51,6 +53,7 @@ public class IDE2 extends JFrame {
     private File archivoActual;
     private boolean archivoModificado = false;
     private ListaEnlazada<Token> tokensReconocidos;
+    private String contenidoOriginal;
 
     public IDE2() {
         configurarVentana();
@@ -107,7 +110,7 @@ public class IDE2 extends JFrame {
         guardarComo.addActionListener(e -> guardarComo());
 
         JMenuItem salir = crearItem("Salir", null);
-        salir.addActionListener(e -> cerrarPrograma());
+        salir.addActionListener(e -> this.dispose());
 
         archivo.add(nuevo);
         archivo.add(abrir);
@@ -257,6 +260,13 @@ public class IDE2 extends JFrame {
         //editor de texto
         editor = new JTextPane();
         editor.setBackground(COLOR_EDITOR);
+        editor.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyReleased(KeyEvent e) {
+                System.out.println("estas presionando una tecla");
+                colorearTexto(editor.getText());
+            }
+        });
         editor.setForeground(COLOR_TEXTO);
         editor.setCaretColor(Color.WHITE);
         editor.setSelectionColor(new Color(45, 90, 130));
@@ -276,9 +286,7 @@ public class IDE2 extends JFrame {
         return panel;
     }
 
-    // ============================================================
-    // PANEL INFERIOR
-    // ============================================================
+    // Panel inferior
     private JPanel crearPanelInferior() {
         JPanel panel = new JPanel(new BorderLayout());
         panel.setBackground(COLOR_PANEL);
@@ -310,10 +318,7 @@ public class IDE2 extends JFrame {
         tabsInferior.addTab("ERRORES SINTACTICOS", new JScrollPane(tablaErroresSintacticos));
         tabsInferior.addTab("PROMPTZAL GENERADO", panelPrompt);
 
-        panel.add(
-                tabsInferior,
-                BorderLayout.CENTER
-        );
+        panel.add(tabsInferior, BorderLayout.CENTER);
 
         return panel;
     }
@@ -366,118 +371,41 @@ public class IDE2 extends JFrame {
         return panel;
     }
 
-    // ============================================================
-    // BARRA DE ESTADO
-    // ============================================================
+    //barra de estados del ide
     private JPanel crearBarraEstado() {
 
-        JPanel barra
-                = new JPanel(
-                        new BorderLayout()
-                );
+        JPanel barra = new JPanel(new BorderLayout());
+        barra.setBackground(COLOR_AZUL);
+        barra.setPreferredSize(new Dimension(0, 28));
 
-        barra.setBackground(
-                COLOR_AZUL
-        );
+        lblEstado = new JLabel("  Listo");
+        lblEstado.setForeground(Color.WHITE);
 
-        barra.setPreferredSize(
-                new Dimension(
-                        0,
-                        28
-                )
-        );
-
-        lblEstado
-                = new JLabel(
-                        "  Listo"
-                );
-
-        lblEstado.setForeground(
-                Color.WHITE
-        );
-
-        JPanel derecha
-                = new JPanel(
-                        new FlowLayout(
-                                FlowLayout.RIGHT,
-                                0,
-                                5
-                        )
-                );
-
+        JPanel derecha = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 5));
         derecha.setOpaque(false);
 
-        lblEstadoLexico
-                = crearEstadoFase(
-                        "Léxico: —"
-                );
+        lblEstadoLexico = cambiarEstado("Léxico: —");
+        lblEstadoSintactico = cambiarEstado("Sintáctico: —");
+        lblEstadoSemantico = cambiarEstado("Semántico: —");
+        lblEstadoGeneracion = cambiarEstado("PromptZal: —");
 
-        lblEstadoSintactico
-                = crearEstadoFase(
-                        "Sintáctico: —"
-                );
+        lblPosicion = cambiarEstado("Ln 1, Col 1");
 
-        lblEstadoSemantico
-                = crearEstadoFase(
-                        "Semántico: —"
-                );
+        derecha.add(lblEstadoLexico);
+        derecha.add(lblEstadoSintactico);
+        derecha.add(lblEstadoSemantico);
+        derecha.add(lblEstadoGeneracion);
+        derecha.add(lblPosicion);
 
-        lblEstadoGeneracion
-                = crearEstadoFase(
-                        "PromptZal: —"
-                );
-
-        lblPosicion
-                = crearEstadoFase(
-                        "Ln 1, Col 1"
-                );
-
-        derecha.add(
-                lblEstadoLexico
-        );
-
-        derecha.add(
-                lblEstadoSintactico
-        );
-
-        derecha.add(
-                lblEstadoSemantico
-        );
-
-        derecha.add(
-                lblEstadoGeneracion
-        );
-
-        derecha.add(
-                lblPosicion
-        );
-
-        barra.add(
-                lblEstado,
-                BorderLayout.WEST
-        );
-
-        barra.add(
-                derecha,
-                BorderLayout.EAST
-        );
+        barra.add(lblEstado, BorderLayout.WEST);
+        barra.add(derecha, BorderLayout.EAST);
 
         return barra;
     }
 
-    private JLabel crearEstadoFase(
-            String texto
-    ) {
-
-        JLabel label
-                = new JLabel(
-                        texto + "    "
-                );
-
-        label.setForeground(
-                Color.WHITE
-        );
-
+    private JLabel cambiarEstado(String texto) {
+        JLabel label = new JLabel(texto + "    ");
+        label.setForeground(Color.WHITE);
         return label;
     }
 
@@ -494,76 +422,45 @@ public class IDE2 extends JFrame {
         return area;
     }
 
-    // ============================================================
-    // ENCABEZADO TOKENS
-    // ============================================================
+    //Encabezado de la tabla tokens
     private String encabezadoTokens() {
-        return String.format("%-5s %-75s %-25s %-8s %-8s%n", "No.", "|Lexema", "|Tipo", "|Fila", "|Col.")
+        return String.format("%-5s %-75s %-25s %-8s %-8s%n", "No.", "Lexema", "Tipo", "Fila", "Col.")
                 + "---------------------------------------------------------------------------------------------------------------------------\n";
     }
 
-    // ============================================================
-    // MENÚ
-    // ============================================================
-    private JMenu crearMenu(
-            String texto
-    ) {
-
-        JMenu menu
-                = new JMenu(
-                        texto
-                );
-
-        menu.setForeground(
-                COLOR_TEXTO
-        );
-
+    //Menu
+    private JMenu crearMenu(String texto) {
+        JMenu menu = new JMenu(texto);
+        menu.setForeground(COLOR_TEXTO);
         return menu;
     }
 
-    private JMenuItem crearItem(
-            String texto,
-            KeyStroke tecla
-    ) {
-
-        JMenuItem item
-                = new JMenuItem(
-                        texto
-                );
+    private JMenuItem crearItem(String texto, KeyStroke tecla) {
+        JMenuItem item = new JMenuItem(texto);
 
         if (tecla != null) {
-
-            item.setAccelerator(
-                    tecla
-            );
+            item.setAccelerator(tecla);
         }
 
         return item;
     }
 
-    // ============================================================
-    // NUEVO ARCHIVO
-    // ============================================================
+    //crear un nuevo archivo
     private void nuevoArchivo() {
-
         if (archivoModificado) {
-
             int respuesta = JOptionPane.showConfirmDialog(
                     this,
                     "Hay cambios sin guardar.\n"
                     + "¿Desea guardarlos?",
                     "Cambios sin guardar",
                     JOptionPane.YES_NO_CANCEL_OPTION);
-
             if (respuesta == JOptionPane.CANCEL_OPTION) {
                 return;
             }
-
             if (respuesta == JOptionPane.YES_OPTION) {
                 guardarArchivo();
             }
         }
-
         editor.setText("");
         archivoActual = null;
         archivoModificado = false;
@@ -572,80 +469,37 @@ public class IDE2 extends JFrame {
         actualizarEstado("Nuevo archivo");
     }
 
-    // ============================================================
-    // ABRIR ARCHIVO
-    // ============================================================
+    //abrir un archivo
     private void abrirArchivo() {
+        JFileChooser chooser = new JFileChooser();
+        chooser.setDialogTitle("Abrir archivo PromptZal");
+        chooser.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter("Archivos PromptZal (*.pz)", "pz"));
 
-        JFileChooser chooser
-                = new JFileChooser();
-
-        chooser.setDialogTitle(
-                "Abrir archivo PromptZal"
-        );
-
-        chooser.setFileFilter(
-                new javax.swing.filechooser.FileNameExtensionFilter(
-                        "Archivos PromptZal (*.pz)",
-                        "pz"
-                )
-        );
-
-        int resultado
-                = chooser.showOpenDialog(
-                        this
-                );
-
-        if (resultado
-                != JFileChooser.APPROVE_OPTION) {
-
+        int resultado = chooser.showOpenDialog(this);
+        if (resultado != JFileChooser.APPROVE_OPTION) {
             return;
         }
 
-        File archivo
-                = chooser.getSelectedFile();
+        File archivo = chooser.getSelectedFile();
 
         try {
-
-            String contenido
-                    = Files.readString(
-                            archivo.toPath(),
-                            StandardCharsets.UTF_8
-                    );
-
-            editor.setText(
-                    contenido
-            );
-
-            archivoActual
-                    = archivo;
-
-            archivoModificado
-                    = false;
-
+            String contenido = Files.readString(archivo.toPath(), StandardCharsets.UTF_8);
+            contenidoOriginal = contenido;
+            colorearTexto(contenido);
+            archivoActual = archivo;
+            archivoModificado = false;
             limpiarResultados();
-
             actualizarNombreArchivo();
+            consola.append("> Archivo abierto: " + archivo.getName() + "\n");
 
-            consola.append(
-                    "> Archivo abierto: "
-                    + archivo.getName()
-                    + "\n"
-            );
-
-            actualizarEstado(
-                    "Archivo abierto"
-            );
+            actualizarEstado("Archivo abierto");
 
         } catch (IOException ex) {
-
-            mostrarError(
-                    "No se pudo abrir el archivo.\n"
-                    + ex.getMessage()
-            );
+            mostrarError("No se pudo abrir el archivo.\n");
         }
     }
 
+    //Guardar Archivo
     private void guardarArchivo() {
         if (archivoActual == null) {
             guardarComo();
@@ -653,21 +507,10 @@ public class IDE2 extends JFrame {
         }
 
         try {
-
-            Files.writeString(
-                    archivoActual.toPath(),
-                    editor.getText(),
-                    StandardCharsets.UTF_8
-            );
-
-            archivoModificado
-                    = false;
-
+            Files.writeString(archivoActual.toPath(), editor.getText(), StandardCharsets.UTF_8);
+            archivoModificado = false;
             actualizarNombreArchivo();
-
-            actualizarEstado(
-                    "Archivo guardado"
-            );
+            actualizarEstado("Archivo guardado");
 
             consola.append(
                     "> Archivo guardado: "
@@ -676,66 +519,29 @@ public class IDE2 extends JFrame {
             );
 
         } catch (IOException ex) {
-
-            mostrarError(
-                    "No se pudo guardar el archivo.\n"
-                    + ex.getMessage()
+            mostrarError("No se pudo guardar el archivo.\n" + ex.getMessage()
             );
         }
     }
 
-    // ============================================================
-    // GUARDAR COMO
-    // ============================================================
+    //guardar 
     private void guardarComo() {
-
-        JFileChooser chooser
-                = new JFileChooser();
-
-        chooser.setDialogTitle(
-                "Guardar archivo .pz"
-        );
-
-        chooser.setFileFilter(
-                new javax.swing.filechooser.FileNameExtensionFilter(
-                        "PromptZal (*.pz)",
-                        "pz"
-                )
-        );
-
-        int resultado
-                = chooser.showSaveDialog(
-                        this
-                );
-
-        if (resultado
-                != JFileChooser.APPROVE_OPTION) {
-
+        JFileChooser chooser = new JFileChooser();
+        chooser.setDialogTitle("Guardar archivo .pz");
+        chooser.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter("PromptZal (*.pz)", "pz"));
+        int resultado = chooser.showSaveDialog(this);
+        if (resultado != JFileChooser.APPROVE_OPTION) {
             return;
         }
-
-        File archivo
-                = chooser.getSelectedFile();
-
-        if (!archivo.getName()
-                .toLowerCase()
-                .endsWith(".pz")) {
-
-            archivo
-                    = new File(
-                            archivo.getAbsolutePath()
-                            + ".pz"
-                    );
+        File archivo = chooser.getSelectedFile();
+        if (!archivo.getName().toLowerCase().endsWith(".pz")) {
+            archivo = new File(archivo.getAbsolutePath() + ".pz");
         }
-
-        archivoActual
-                = archivo;
-
+        archivoActual = archivo;
         guardarArchivo();
     }
 
-    // ============================================================
-    // ANALIZAR
+    // analizar archivo
     private void analizarArchivo() {
         tablaTokens.setText(encabezadoTokens());
         String codigo = editor.getText();
@@ -756,7 +562,6 @@ public class IDE2 extends JFrame {
         ejecutarAnalisisLexico();
 
         lblEstadoLexico.setText("Léxico: ✓    ");
-        tablaErroresLexicos.setText("✓ No se encontraron errores léxicos.\n");
         consola.append("> Análisis léxico terminado.\n");
         actualizarEstado("Análisis léxico terminado");
 
@@ -766,9 +571,97 @@ public class IDE2 extends JFrame {
 
     }
 
-    private void ejecutarAnalisisLexico() {
+    private void colorearTexto(String contenido) {
+        ListaEnlazada<Token> tokensColorear = new ListaEnlazada<>();
 
-        String codigo = editor.getText();
+        try {
+            Reader reader = new StringReader(contenido);
+            Colorear analizador = new Colorear(reader);
+            Token tokenActual;
+            while ((tokenActual = analizador.yylex()) != null) {
+                tokensColorear.agregarNuevo(tokenActual);
+            }
+            reader.close();
+        } catch (Exception e) {
+            System.out.println("Error al leer el archivo: ");
+        }
+
+        StyledDocument documento = editor.getStyledDocument();
+
+        try {
+            documento.remove(0, documento.getLength());
+        } catch (BadLocationException ex) {
+            ex.printStackTrace();
+        }
+
+        Style estiloDirectiva = editor.addStyle("Directiva", null);
+        StyleConstants.setForeground(estiloDirectiva, new Color(0, 139, 139));
+        StyleConstants.setBold(estiloDirectiva, true);
+
+        Style estiloComentario = editor.addStyle("Comentario", null);
+        StyleConstants.setForeground(estiloComentario, new Color(63, 127, 95));
+        StyleConstants.setBold(estiloComentario, true);
+
+        Style estiloCadena = editor.addStyle("Cadena", null);
+        StyleConstants.setForeground(estiloCadena, Color.ORANGE);
+        StyleConstants.setBold(estiloCadena, true);
+
+        Style estiloReservadas = editor.addStyle("reservadas", null);
+        StyleConstants.setForeground(estiloReservadas, Color.BLUE);
+        StyleConstants.setBold(estiloReservadas, true);
+
+        Style estiloComandosIA = editor.addStyle("reservadas", null);
+        StyleConstants.setForeground(estiloComandosIA, Color.MAGENTA);
+        StyleConstants.setBold(estiloComandosIA, true);
+
+        Style estiloNumeros = editor.addStyle("numeros", null);
+        StyleConstants.setForeground(estiloNumeros, new Color(36, 110, 18));
+        StyleConstants.setBold(estiloNumeros, true);
+
+        Style estiloError = editor.addStyle("numeros", null);
+        StyleConstants.setForeground(estiloError, Color.RED);
+        StyleConstants.setBold(estiloError, true);
+
+        for (int i = 0; i < tokensColorear.getTamañoLista(); i++) {
+            try {
+
+                Token token = tokensColorear.obtenerDatos(i);
+                System.out.println(tokensColorear.obtenerDatos(i).getTipo());
+                int inicio = documento.getLength();
+                String lexema = token.getLexema();
+
+                documento.insertString(inicio, lexema, null);
+
+                if (token.getTipo().equals("DIRECTIVA")) {
+                    documento.setCharacterAttributes(inicio, lexema.length(), estiloDirectiva, true);
+                } else if (token.getTipo().equals("COMENTARIO")) {
+                    documento.setCharacterAttributes(inicio, lexema.length(), estiloComentario, true);
+                } else if (token.getTipo().equals("CADENA")) {
+                    documento.setCharacterAttributes(inicio, lexema.length(), estiloCadena, true);
+                } else if (token.getTipo().equals("RESERVADAS")) {
+                    documento.setCharacterAttributes(inicio, lexema.length(), estiloReservadas, true);
+                } else if (token.getTipo().equals("COMANDO_IA")) {
+                    documento.setCharacterAttributes(inicio, lexema.length(), estiloComandosIA, true);
+                } else if (token.getTipo().equals("NUMERO")) {
+                    documento.setCharacterAttributes(inicio, lexema.length(), estiloNumeros, true);
+                } else if (token.getTipo().equals("ERROR")) {
+                    documento.setCharacterAttributes(inicio, lexema.length(), estiloError, true);
+                }
+
+            } catch (ListaEnlazadaException | BadLocationException ex) {
+                System.out.println("error al colorear");
+            }
+        }
+    }
+
+    private void ejecutarAnalisisLexico() {
+        String codigo;
+        if (contenidoOriginal == null) {
+            codigo = editor.getText();
+        } else {
+            codigo = contenidoOriginal;
+        }
+
         StringReader leer = new StringReader(codigo);
         AnalizadorLexico analizador = new AnalizadorLexico(leer);
         tokensReconocidos = new ListaEnlazada<>();
@@ -776,6 +669,7 @@ public class IDE2 extends JFrame {
             Token tokenActual;
             while ((tokenActual = analizador.yylex()) != null) {
                 tokensReconocidos.agregarNuevo(tokenActual);
+
             }
         } catch (Exception e) {
             System.out.println("Error en el analisis Lexico: " + e.getMessage());
@@ -792,15 +686,20 @@ public class IDE2 extends JFrame {
                 System.out.println("Error al mostrar tokens en consola");
             }
         }
+        colorearTexto(codigo);
+
+        if (analizador.obtenerErrores().length() == 0) {
+            tablaErroresLexicos.setText("No hay errores Lexicos");
+        } else {
+            tablaErroresLexicos.setText(analizador.obtenerErrores());
+        }
+
     }
 
     private boolean ejecutarAnalisisSintactico() {
         return true;
     }
 
-    // ============================================================
-    // FASE SEMÁNTICA
-    // ============================================================
     private boolean ejecutarAnalisisSemantico() {
         return true;
     }
@@ -817,75 +716,30 @@ public class IDE2 extends JFrame {
         guardarPrompt("Texto (*.txt)", "txt");
     }
 
-    private void guardarPrompt(String descripcion,
-            String extension
-    ) {
+    private void guardarPrompt(String descripcion, String extension) {
 
-        if (promptGenerado == null
-                || promptGenerado.getText()
-                        .trim()
-                        .isEmpty()
-                || promptGenerado.getText()
-                        .startsWith(
-                                "El PromptZal generado"
-                        )) {
-
-            mostrarError(
-                    "Primero debe compilar un archivo."
-            );
-
+        if (promptGenerado == null || promptGenerado.getText().trim().isEmpty() || promptGenerado.getText().startsWith("El PromptZal generado")) {
+            mostrarError("Primero debe compilar un archivo.");
             return;
         }
 
-        JFileChooser chooser
-                = new JFileChooser();
+        JFileChooser chooser = new JFileChooser();
+        chooser.setDialogTitle("Guardar PromptZal");
+        chooser.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter(descripcion, extension));
 
-        chooser.setDialogTitle(
-                "Guardar PromptZal"
-        );
-
-        chooser.setFileFilter(
-                new javax.swing.filechooser.FileNameExtensionFilter(
-                        descripcion,
-                        extension
-                )
-        );
-
-        int resultado
-                = chooser.showSaveDialog(
-                        this
-                );
-
-        if (resultado
-                != JFileChooser.APPROVE_OPTION) {
-
+        int resultado = chooser.showSaveDialog(this);
+        if (resultado != JFileChooser.APPROVE_OPTION) {
             return;
         }
 
-        File archivo
-                = chooser.getSelectedFile();
-
-        if (!archivo.getName()
-                .toLowerCase()
-                .endsWith(
-                        "." + extension
-                )) {
-
-            archivo
-                    = new File(
-                            archivo.getAbsolutePath()
-                            + "."
-                            + extension
-                    );
+        File archivo = chooser.getSelectedFile();
+        if (!archivo.getName().toLowerCase().endsWith("." + extension)) {
+            archivo = new File(archivo.getAbsolutePath() + "." + extension);
         }
 
         try {
 
-            Files.writeString(
-                    archivo.toPath(),
-                    promptGenerado.getText(),
-                    StandardCharsets.UTF_8
-            );
+            Files.writeString(archivo.toPath(), promptGenerado.getText(), StandardCharsets.UTF_8);
 
             consola.append(
                     "> PromptZal guardado: "
@@ -893,109 +747,43 @@ public class IDE2 extends JFrame {
                     + "\n"
             );
 
-            actualizarEstado(
-                    "PromptZal guardado"
-            );
+            actualizarEstado("PromptZal guardado");
 
         } catch (IOException ex) {
-
-            mostrarError(
-                    "No se pudo guardar el PromptZal.\n"
-                    + ex.getMessage()
+            mostrarError("No se pudo guardar el PromptZal.\n" + ex.getMessage()
             );
         }
     }
 
-
-    private void generarReporteTokens() {
-
-        
-    }
-
-
-    private void generarReporteErrores() {
-
-      
-    }
-
-    private void generarTodosLosReportes() {
-
-        
-    }
-
-   
-
-    
     private void limpiarResultados() {
 
         if (tablaTokens != null) {
-
-            tablaTokens.setText(
-                    encabezadoTokens()
-            );
+            tablaTokens.setText(encabezadoTokens());
         }
 
         if (promptGenerado != null) {
-
-            promptGenerado.setText(
-                    "El PromptZal generado aparecerá aquí..."
-            );
+            promptGenerado.setText("El PromptZal generado aparecerá aquí...");
         }
 
         if (lblEstadoLexico != null) {
-
-            lblEstadoLexico.setText(
-                    "Léxico: —    "
-            );
-
-            lblEstadoSintactico.setText(
-                    "Sintáctico: —    "
-            );
-
-            lblEstadoSemantico.setText(
-                    "Semántico: —    "
-            );
-
-            lblEstadoGeneracion.setText(
-                    "PromptZal: —    "
-            );
+            lblEstadoLexico.setText("Léxico: —    ");
+            lblEstadoSintactico.setText("Sintáctico: —    ");
+            lblEstadoSemantico.setText("Semántico: —    ");
+            lblEstadoGeneracion.setText("PromptZal: —    ");
         }
     }
 
-    // ============================================================
-    // POSICIÓN DEL CURSOR
-    // ============================================================
-    private void posicionCursor() {
+    private void posicionFilaYColumna() {
 
-        if (editor == null
-                || lblPosicion == null) {
-
+        if (editor == null || lblPosicion == null) {
             return;
         }
 
         try {
-
-            int posicion
-                    = editor.getCaretPosition();
-
-            int linea
-                    = editor.getDocument()
-                            .getDefaultRootElement()
-                            .getElementIndex(
-                                    posicion
-                            ) + 1;
-
-            int inicio
-                    = editor.getDocument()
-                            .getDefaultRootElement()
-                            .getElement(
-                                    linea - 1
-                            )
-                            .getStartOffset();
-
-            int columna
-                    = posicion - inicio + 1;
-
+            int posicion = editor.getCaretPosition();
+            int linea = editor.getDocument().getDefaultRootElement().getElementIndex(posicion) + 1;
+            int inicio = editor.getDocument().getDefaultRootElement().getElement(linea - 1).getStartOffset();
+            int columna = posicion - inicio + 1;
             lblPosicion.setText(
                     "Ln "
                     + linea
@@ -1005,181 +793,94 @@ public class IDE2 extends JFrame {
             );
 
         } catch (Exception ignored) {
+            System.out.println("Error al obtener linae y columna del editor");
         }
     }
-
 
     private void actualizarNombreArchivo() {
 
         String nombre;
 
         if (archivoActual == null) {
-
-            nombre
-                    = "Sin título.pz";
-
+            nombre = "Sin título.pz";
         } else {
-
-            nombre
-                    = archivoActual.getName();
+            nombre = archivoActual.getName();
         }
 
         if (archivoModificado) {
-
-            nombre
-                    = "● " + nombre;
+            nombre = "● " + nombre;
         }
-
         if (lblArchivo != null) {
-
-            lblArchivo.setText(
-                    "   📄  " + nombre
+            lblArchivo.setText("   📄  " + nombre
             );
         }
 
-        setTitle(
-                "PromptZal IDE - "
-                + nombre
-        );
+        setTitle("PromptZal IDE - " + nombre);
     }
-
 
     private void agregarEventos() {
 
-        editor.getDocument()
-                .addDocumentListener(new DocumentListener() {
+        editor.getDocument().addDocumentListener(new DocumentListener() {
+            @Override
+            public void insertUpdate(DocumentEvent e) {
+                archivoModificado = true;
+                actualizarNombreArchivo();
+                posicionFilaYColumna();
+            }
 
-                    @Override
-                    public void insertUpdate(
-                            DocumentEvent e
-                    ) {
+            @Override
+            public void removeUpdate(DocumentEvent e) {
+                archivoModificado = true;
+                actualizarNombreArchivo();
+                posicionFilaYColumna();
+            }
 
-                        archivoModificado
-                                = true;
-
-                        actualizarNombreArchivo();
-
-                        posicionCursor();
-                    }
-
-                    @Override
-                    public void removeUpdate(
-                            DocumentEvent e
-                    ) {
-
-                        archivoModificado
-                                = true;
-
-                        actualizarNombreArchivo();
-
-                        posicionCursor();
-                    }
-
-                    @Override
-                    public void changedUpdate(
-                            DocumentEvent e
-                    ) {
-
-                        posicionCursor();
-                    }
-                }
-                );
-
-        editor.addCaretListener(e -> posicionCursor()
+            @Override
+            public void changedUpdate(DocumentEvent e) {
+                posicionFilaYColumna();
+            }
+        });
+        editor.addCaretListener(e -> posicionFilaYColumna()
         );
     }
-
 
     private void crearAtajos() {
+        InputMap mapa = editor.getInputMap(JComponent.WHEN_FOCUSED);
+        ActionMap acciones = editor.getActionMap();
 
-        InputMap mapa
-                = editor.getInputMap(
-                        JComponent.WHEN_FOCUSED
-                );
+        mapa.put(KeyStroke.getKeyStroke(KeyEvent.VK_F5, 0), "analizar");
 
-        ActionMap acciones
-                = editor.getActionMap();
-
-        mapa.put(
-                KeyStroke.getKeyStroke(
-                        KeyEvent.VK_F5,
-                        0
-                ),
-                "analizar"
-        );
-
-        acciones.put(
-                "analizar",
-                new AbstractAction() {
-
+        acciones.put("analizar", new AbstractAction() {
             @Override
-            public void actionPerformed(
-                    ActionEvent e
-            ) {
-
+            public void actionPerformed(ActionEvent e) {
                 analizarArchivo();
             }
-        }
-        );
+        });
 
-        mapa.put(
-                KeyStroke.getKeyStroke(
-                        KeyEvent.VK_F6,
-                        0
-                ),
-                "compilar"
-        );
+        mapa.put(KeyStroke.getKeyStroke(KeyEvent.VK_F6, 0), "compilar");
 
-        acciones.put(
-                "compilar",
-                new AbstractAction() {
-
+        acciones.put("compilar", new AbstractAction() {
             @Override
-            public void actionPerformed(
-                    ActionEvent e
-            ) {
-
+            public void actionPerformed(ActionEvent e) {
                 compilarArchivo();
             }
-        }
-        );
+        });
     }
 
- 
-    private void actualizarEstado(
-            String texto
-    ) {
+    private void actualizarEstado(String texto) {
 
         if (lblEstado != null) {
-
-            lblEstado.setText(
-                    "  " + texto
-            );
+            lblEstado.setText("  " + texto);
         }
     }
 
- 
-    private void mostrarError(
-            String mensaje
-    ) {
+    private void mostrarError(String mensaje) {
 
-        JOptionPane.showMessageDialog(
-                this,
-                mensaje,
-                "PromptZal",
-                JOptionPane.ERROR_MESSAGE
-        );
-
-        actualizarEstado(
-                "Error"
-        );
+        JOptionPane.showMessageDialog(this, mensaje, "PromptZal", JOptionPane.ERROR_MESSAGE);
+        actualizarEstado("Error");
     }
 
-    // ============================================================
-    // ACERCA DE
-    // ============================================================
     private void mostrarAcercaDe() {
-
         JOptionPane.showMessageDialog(
                 this,
                 "PROMPTZAL IDE\n\n"
@@ -1192,194 +893,53 @@ public class IDE2 extends JFrame {
     }
 
     // ============================================================
-    // CERRAR PROGRAMA
-    // ============================================================
-    private void cerrarPrograma() {
-
-        if (archivoModificado) {
-
-            int respuesta
-                    = JOptionPane.showConfirmDialog(
-                            this,
-                            "Hay cambios sin guardar.\n"
-                            + "¿Desea guardar antes de salir?",
-                            "Salir",
-                            JOptionPane.YES_NO_CANCEL_OPTION
-                    );
-
-            if (respuesta
-                    == JOptionPane.CANCEL_OPTION) {
-
-                return;
-            }
-
-            if (respuesta
-                    == JOptionPane.YES_OPTION) {
-
-                guardarArchivo();
-            }
-        }
-
-        dispose();
-
-        System.exit(0);
-    }
-
-    // ============================================================
-    // MAIN
-    // ============================================================
-    public static void main(
-            String[] args
-    ) {
-
-        /*
-         * NO utilizamos el Look & Feel de Windows.
-         *
-         * Esto es importante porque el Look & Feel del sistema
-         * puede modificar los colores de JButton y JTabbedPane.
-         */
-        try {
-
-            UIManager.setLookAndFeel(
-                    UIManager
-                            .getCrossPlatformLookAndFeelClassName()
-            );
-
-        } catch (Exception ignored) {
-        }
-
-        /*
-         * Se crea directamente la ventana.
-         */
-        IDE2 ventana
-                = new IDE2();
-
-        ventana.setVisible(true);
-    }
-
-    // ============================================================
     // NÚMEROS DE LÍNEA
     // ============================================================
-    public static class TextLineNumber
-            extends JPanel
-            implements DocumentListener {
+    public static class TextLineNumber extends JPanel implements DocumentListener {
 
         private final JTextPane editor;
+        private final Font fuente = new Font(Font.MONOSPACED, Font.PLAIN, 14);
 
-        private final Font fuente
-                = new Font(
-                        Font.MONOSPACED,
-                        Font.PLAIN,
-                        14
-                );
+        public TextLineNumber(JTextPane editor) {
+            this.editor = editor;
+            setBackground(new Color(35, 35, 35));
+            setPreferredSize(new Dimension(55, 0));
 
-        public TextLineNumber(
-                JTextPane editor
-        ) {
-
-            this.editor
-                    = editor;
-
-            setBackground(
-                    new Color(
-                            35,
-                            35,
-                            35
-                    )
-            );
-
-            setPreferredSize(
-                    new Dimension(
-                            55,
-                            0
-                    )
-            );
-
-            editor.getDocument()
-                    .addDocumentListener(
-                            this
-                    );
+            editor.getDocument().addDocumentListener(this);
         }
 
         @Override
-        protected void paintComponent(
-                Graphics g
-        ) {
-
+        protected void paintComponent(Graphics g) {
             super.paintComponent(g);
+            g.setFont(fuente);
+            g.setColor(new Color(115, 115, 115));
 
-            g.setFont(
-                    fuente
-            );
+            FontMetrics metricas = g.getFontMetrics();
+            int altura = metricas.getHeight();
+            int cantidad = editor.getDocument().getDefaultRootElement().getElementCount();
 
-            g.setColor(
-                    new Color(
-                            115,
-                            115,
-                            115
-                    )
-            );
+            for (int i = 0; i < cantidad; i++) {
+                String numero = String.valueOf(i + 1);
 
-            FontMetrics metricas
-                    = g.getFontMetrics();
+                int y = ((i + 1) * altura) - 4;
+                int x = getWidth() - 8 - metricas.stringWidth(numero);
 
-            int altura
-                    = metricas.getHeight();
-
-            int cantidad
-                    = editor.getDocument()
-                            .getDefaultRootElement()
-                            .getElementCount();
-
-            for (int i = 0;
-                    i < cantidad;
-                    i++) {
-
-                String numero
-                        = String.valueOf(
-                                i + 1
-                        );
-
-                int y
-                        = ((i + 1)
-                        * altura) - 4;
-
-                int x
-                        = getWidth()
-                        - 8
-                        - metricas.stringWidth(
-                                numero
-                        );
-
-                g.drawString(
-                        numero,
-                        x,
-                        y
-                );
+                g.drawString(numero, x, y);
             }
         }
 
         @Override
-        public void insertUpdate(
-                DocumentEvent e
-        ) {
-
+        public void insertUpdate(DocumentEvent e) {
             repaint();
         }
 
         @Override
-        public void removeUpdate(
-                DocumentEvent e
-        ) {
-
+        public void removeUpdate(DocumentEvent e) {
             repaint();
         }
 
         @Override
-        public void changedUpdate(
-                DocumentEvent e
-        ) {
-
+        public void changedUpdate(DocumentEvent e) {
             repaint();
         }
     }

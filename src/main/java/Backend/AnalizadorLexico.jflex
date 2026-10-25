@@ -15,15 +15,29 @@ import Backend.Token;
 %{
      // contador para controlar la cantidad de tokens reconocidos
     private int noTokens;  
+    private int noErrores;  
     private StringBuilder comentario = new StringBuilder();
     private StringBuilder cadenaCompleta = new StringBuilder();
     private int columnaCadena;
     private int columnaComentario;
+    private StringBuilder  errores = new StringBuilder();;
 
     public Token crearToken(String tipo) {
         noTokens++;
         Token token = new Token(noTokens, yytext(), tipo, yyline + 1, yycolumn + 1 );
         return token;
+    }
+
+    public void reportarError(String tipo, String lexema){
+        
+        noErrores++;
+        errores.append(noErrores + " | " + "Error, " + tipo + ", Lexema: " + lexema + ", Fila: " + (yyline + 1 ) + ", Columna: " + (yycolumn + 1) + "\n"); 
+        
+    }
+
+    public String obtenerErrores(){
+        System.out.println(errores.length());
+        return errores.toString();
     }
     
     
@@ -56,7 +70,7 @@ comentarioDeLinea = "//" .*
 <YYINITIAL> {
     //----------------------------Ignorar espacios-------------------------------
     {ESPACIO} { 
-
+       
     }
 
     //-----------------------------Deteccion de comentarios---------------------------
@@ -170,22 +184,42 @@ comentarioDeLinea = "//" .*
 //-----------------------cadena--------------------------------------------
 <cadena> "\"" {
     cadenaCompleta.append(yytext());
+
     noTokens++;
-    Token token = new Token(noTokens, cadenaCompleta.toString(), "CADENA", yyline + 1, columnaCadena);
+    Token token = new Token(
+        noTokens,
+        cadenaCompleta.toString(),
+        "CADENA",
+        yyline + 1,
+        columnaCadena
+    );
+
+    cadenaCompleta.setLength(0);
     yybegin(YYINITIAL);
     return token;
-    
-
 }
 
-<cadena> [^\"]+ { 
+<cadena> [^\r\n\"]+ {
     cadenaCompleta.append(yytext());
 }
 
-<cadena> <<EOF>> {
-    System.err.println("Error léxico: cadena sin cerrar " + yytext());
+<cadena> \r\n|\r|\n {
+    String lexema = cadenaCompleta.toString();
+
+    reportarError("Cadena sin cerrar", lexema);
+
+    cadenaCompleta.setLength(0);
     yybegin(YYINITIAL);
-}    
+}
+
+<cadena> <<EOF>> {
+    String lexema = cadenaCompleta.toString();
+
+    reportarError("Cadena sin cerrar", lexema);
+
+    cadenaCompleta.setLength(0);
+    yybegin(YYINITIAL);
+} 
     
 //-----------------------------Comentario de bloque-----------------------------------    
 <comentarioDeBloque> "*/" {
@@ -202,13 +236,14 @@ comentarioDeLinea = "//" .*
 
 
 <comentarioDeBloque> <<EOF>> {
-    System.err.println("Error léxico: comentario de bloque sin cerrar " + yytext());
+    reportarError("comentario sin cerrar", yytext());
     yybegin(YYINITIAL);
+    
+    
 }
 
 
 . {
-    System.out.println("Error detectado: " + yytext());
-    return crearToken("caracter no reconocido");
+    reportarError("caracter no reconocido", yytext());
 }
 

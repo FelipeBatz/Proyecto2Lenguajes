@@ -24,6 +24,8 @@ public class Token {
         this.columna = columna;
 
     }
+    
+
 
     public int getNoToken() {
         return noToken;

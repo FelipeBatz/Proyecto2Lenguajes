@@ -5,6 +5,7 @@ public class AnalizadorSintactico2 {
     private ListaEnlazada<Token> listaTokens;
     private ListaEnlazada<String> listaErrores;
     private int posicionListaTokens;
+    private NodoAST nodoInicial;
 
     private final String[] TOKENS_SINCRONIZACION = {
         "AGENTE",
@@ -16,36 +17,27 @@ public class AnalizadorSintactico2 {
         "EOF"
     };
 
-    public AnalizadorSintactico2(ListaEnlazada<Token> listaTokens) {
+    private NodoAST raizAST;
+
+    public AnalizadorSintactico2(
+            ListaEnlazada<Token> listaTokens) {
+        nodoInicial = nuevoNodo("Programa", "", "", 1);
         this.listaTokens = listaTokens;
         this.listaErrores = new ListaEnlazada<>();
         this.posicionListaTokens = 0;
+        this.raizAST = null;
     }
 
-    private boolean esTokenSincronizacion(String tipo) {
-        for (String token : TOKENS_SINCRONIZACION) {
-            if (token.equals(tipo)) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private void reportarError(Token tokenActual, String tipo) {
-        String error = "Se esperaba: " + tipo
-                + ", pero llegó: " + tokenActual.getTipo()
-                + ", lexema: " + tokenActual.getLexema()
-                + ", columna: " + tokenActual.getColumna()
-                + ", fila: " + tokenActual.getFila();
-
-        listaErrores.agregarNuevo(error);
-    }
-
+    // =====================================================
+    // MÉTODOS GENERALES
+    // =====================================================
     private Token tokenActual() {
+
         if (posicionListaTokens < listaTokens.getTamañoLista()) {
             try {
-                return listaTokens.obtenerDatos(posicionListaTokens);
+                return listaTokens.obtenerDatos(
+                        posicionListaTokens
+                );
             } catch (ListaEnlazadaException ex) {
                 System.out.println(
                         "Error al obtener el token actual."
@@ -61,59 +53,129 @@ public class AnalizadorSintactico2 {
     }
 
     private void avanzar() {
-        if (!verificarToken("EOF")) {
+        if (posicionListaTokens < listaTokens.getTamañoLista()
+                && !verificarToken("EOF")) {
             posicionListaTokens++;
         }
     }
 
-    /*
-     * Recuperación por pánico:
-     * avanza hasta encontrar el token esperado,
-     * un token de sincronización o EOF.
-     */
-    private void recuperarError(String tipoEsperado) {
+    private boolean esTokenSincronizacion(String tipo) {
 
-        while (!verificarToken("EOF")) {
-
-            // Se encontró el token esperado.
-            if (verificarToken(tipoEsperado)) {
-                avanzar();
-                return;
+        for (String token : TOKENS_SINCRONIZACION) {
+            if (token.equals(tipo)) {
+                return true;
             }
-
-            // Se encontró un punto de sincronización.
-            if (esTokenSincronizacion(tokenActual().getTipo())) {
-                return;
-            }
-
-            avanzar();
         }
+
+        return false;
+    }
+
+    private void reportarError(Token token, String esperado) {
+
+        String error
+                = "Error sintáctico en fila "
+                + token.getFila()
+                + ", columna "
+                + token.getColumna()
+                + ": se esperaba "
+                + esperado
+                + ", pero se encontró "
+                + token.getTipo()
+                + " ("
+                + token.getLexema()
+                + ").";
+
+        listaErrores.agregarNuevo(error);
     }
 
     /*
-     * Consume el token si es correcto.
-     * En caso contrario, reporta el error y recupera.
+     * Espera un token.
+     *
+     * Si lo encuentra, lo consume y lo devuelve.
+     * Si no lo encuentra, informa el error y busca
+     * el token esperado sin eliminar los tokens
+     * de sincronización.
      */
-    private void esperar(String tipo) {
+    private String esperar(String tipoEsperado) {
 
-        if (verificarToken(tipo)) {
+        if (verificarToken(tipoEsperado)) {
+            String lexema = tokenActual().getLexema();
             avanzar();
-        } else {
-            reportarError(tokenActual(), tipo);
-            recuperarError(tipo);
+            return lexema;
+        }
+
+        reportarError(tokenActual(), tipoEsperado);
+
+        while (!verificarToken("EOF")
+                && !verificarToken(tipoEsperado)
+                && !esTokenSincronizacion(
+                        tokenActual().getTipo())) {
+
+            avanzar();
+        }
+
+        if (verificarToken(tipoEsperado)) {
+            Token token = tokenActual();
+            avanzar();
+            return token.getLexema();
+        }
+
+        return "";
+
+    }
+
+    private NodoAST nuevoNodo(String tipo, String lexema, String valor, int fila) {
+        return new NodoAST(tipo, lexema, valor, fila);
+    }
+
+    private void agregarHijo(
+            NodoAST padre,
+            NodoAST hijo) {
+
+        if (padre != null && hijo != null) {
+            padre.agregarHijo(hijo);
         }
     }
 
-    public void analizar() {
+    // =====================================================
+    // ANÁLISIS PRINCIPAL
+    // =====================================================
+    public NodoAST analizar() {
+
         posicionListaTokens = 0;
-        programa();
+        listaErrores = new ListaEnlazada<>();
+        raizAST = null;
+
+        raizAST = programa();
+
+        if (raizAST != null) {
+            try {
+                ReporteASTHtml reporte = new ReporteASTHtml();
+
+                reporte.generar(
+                        raizAST,
+                        "reporteAST.html"
+                );
+
+                System.out.println(
+                        "Reporte AST generado: reporteAST.html"
+                );
+
+            } catch (java.io.IOException ex) {
+                System.out.println(
+                        "Error al generar el HTML: " + ex.getMessage()
+                );
+            }
+        }
+
+        System.out.println("====== ERRORES ======");
 
         if (listaErrores.getTamañoLista() > 0) {
-            System.out.println("\nErrores sintácticos:");
 
             for (int i = 0;
                     i < listaErrores.getTamañoLista();
                     i++) {
+
                 try {
                     System.out.println(
                             listaErrores.obtenerDatos(i)
@@ -124,6 +186,7 @@ public class AnalizadorSintactico2 {
                     );
                 }
             }
+
         } else {
             System.out.println(
                     "No se encontraron errores sintácticos."
@@ -131,21 +194,47 @@ public class AnalizadorSintactico2 {
         }
 
         System.out.println("Análisis finalizado.");
+
+        return raizAST;
     }
 
-    private void programa() {
+    public NodoAST getRaizAST() {
+        return raizAST;
+    }
+
+    public ListaEnlazada<String> getListaErrores() {
+        return listaErrores;
+    }
+
+    // =====================================================
+    // <programa>
+    // =====================================================
+    private NodoAST programa() {
+
         directivas();
         agentes();
-        ejecuciones();
-        exportar();
+        agregarHijo(nodoInicial, ejecuciones());
+        agregarHijo(nodoInicial, exportar());
         esperar("EOF");
+        return nodoInicial;
     }
 
+    // =====================================================
+    // <directivas>
+    // =====================================================
     private void directivas() {
         while (verificarToken("DIRECTIVA")) {
-            esperar("DIRECTIVA");
-            esperar("CADENA");
+            int posicionAnterior = posicionListaTokens;
+            int filaActual = tokenActual().getFila();
+            String lexema = esperar("DIRECTIVA");
+            String cadena = esperar("CADENA");
+            NodoAST nodo = nuevoNodo("DIRECTIVA", lexema, cadena, filaActual);
+            agregarHijo(nodoInicial, nodo);
+            if (posicionAnterior == posicionListaTokens) {
+                avanzar();
+            }
         }
+
     }
 
     private void agentes() {
@@ -155,122 +244,305 @@ public class AnalizadorSintactico2 {
 
     private void mas_agentes() {
         while (verificarToken("AGENTE")) {
-            int posicionAnterior = posicionListaTokens;
-
             agente();
-
-            // Evita ciclos infinitos.
-            if (posicionListaTokens == posicionAnterior) {
-                avanzar();
-            }
+            mas_agentes();
         }
     }
 
     private void agente() {
-        esperar("AGENTE");
-        esperar("ID");
+        int filaActual = tokenActual().getFila();
+        String lexema = esperar("AGENTE");
+        String id = esperar("ID");
+        NodoAST nodo = nuevoNodo(lexema, id, id, filaActual);
+        agregarHijo(nodoInicial, nodo);
         esperar("LLAVE_A");
-        contexto();
-        variables();
-        comandos();
+        contexto(nodo);
+        variables(nodo);
+        comandos(nodo);
         esperar("LLAVE_C");
+
     }
 
-    private void contexto() {
-        esperar("CONTEXTO");
+    // =====================================================
+    // <contexto>
+    // =====================================================
+    private void contexto(NodoAST nodopadre) {
+        int filaActual = tokenActual().getFila();
+        String lexema = esperar("CONTEXTO");
         esperar("IGUAL");
-        esperar("CADENA");
+        String cadena = esperar("CADENA");
+        NodoAST nodo = nuevoNodo(lexema, cadena, cadena, filaActual);
+        agregarHijo(nodopadre, nodo);
     }
 
-    private void variables() {
-        while (verificarToken("VARIABLE")) {
-            int posicionAnterior = posicionListaTokens;
+    // =====================================================
+    // <variables>
+    // =====================================================
+    private void variables(NodoAST nodoPadre) {
 
-            esperar("VARIABLE");
-            esperar("ID");
+        while (verificarToken("VARIABLE")) {
+            int filaActual = tokenActual().getFila();
+            int posicionAnterior = posicionListaTokens;
+            String lexema = esperar("VARIABLE");
+            String id = esperar("ID");
             esperar("IGUAL");
             expresion();
+            variables(nodoPadre);
+            NodoAST nodo = nuevoNodo(lexema, id, id, filaActual);
+            agregarHijo(nodoPadre, nodo);
 
-            if (posicionListaTokens == posicionAnterior) {
+            if (posicionAnterior == posicionListaTokens) {
                 avanzar();
             }
         }
+
     }
 
-    private void comandos() {
-        comando();
-        mas_comandos();
+    private void comandos(NodoAST nodoPadre) {
+        comando(nodoPadre);
+        mas_comandos(nodoPadre);
+
     }
 
-    private void mas_comandos() {
+    private void mas_comandos(NodoAST nodoPadre) {
         while (verificarToken("COMANDO_IA")) {
-            int posicionAnterior = posicionListaTokens;
-
-            comando();
-
-            if (posicionListaTokens == posicionAnterior) {
-                avanzar();
-            }
+            comando(nodoPadre);
         }
     }
 
-    public void comando() {
-        esperar("COMANDO_IA");
+
+
+    private void comando(NodoAST nodoPadre) {
+        int filaActual = tokenActual().getFila();
+        int posicionAnterior = posicionListaTokens;
+        String lexema = esperar("COMANDO_IA");
         expresion();
         conectores();
         esperar("FLECHA");
-        esperar("ID");
+        String id = esperar("ID");
+        NodoAST nodo = nuevoNodo(lexema, id, id, filaActual);
+        agregarHijo(nodoPadre, nodo);
+        if (posicionAnterior == posicionListaTokens) {
+            avanzar();
+        }
     }
 
-    public void conectores() {
+    private void conectores() {
         while (verificarToken("CONECTOR")) {
             esperar("CONECTOR");
-            expresion();
+            expresion(); 
         }
     }
 
-    public void expresion() {
-        termino();
-        mas_terminos();
-    }
+ 
+    public NodoAST expresion() {
 
-    public void mas_terminos() {
+        NodoAST nodo = nuevoNodo("Expresion", "", "", 1);
+
+        agregarHijo(nodo, termino());
+
         while (verificarToken("MAS")) {
-            esperar("MAS");
-            termino();
-        }
-    }
 
-    public void termino() {
-        if (verificarToken("CADENA")) {
-            esperar("CADENA");
+            int posicionAnterior = posicionListaTokens;
 
-        } else if (verificarToken("ID")) {
-            esperar("ID");
+            String operador = esperar("MAS");
 
-        } else if (verificarToken("NUMERO")) {
-            esperar("NUMERO");
-            unidad();
-
-        } else if (verificarToken("CARGAR")) {
-            cargar();
-
-        } else {
-            reportarError(
-                    tokenActual(),
-                    "CADENA, ID, NUMERO o CARGAR"
+            NodoAST nodoOperador = nuevoNodo(
+                    "Operador", "",
+                    operador, 1
             );
 
-            recuperarTermino();
+            agregarHijo(
+                    nodoOperador,
+                    termino()
+            );
+
+            agregarHijo(nodo, nodoOperador);
+
+            if (posicionAnterior == posicionListaTokens) {
+                avanzar();
+            }
         }
+
+        return nodo;
     }
 
-    /*
-     * Recuperación específica para expresiones.
-     * Conserva operadores y tokens que pueden indicar
-     * dónde debe continuar la expresión.
-     */
+    public NodoAST termino() {
+
+        if (verificarToken("CADENA")) {
+
+            String token = esperar("CADENA");
+
+            return nuevoNodo(
+                    "Cadena", "",
+                    token, 1
+            );
+
+        } else if (verificarToken("ID")) {
+
+            String token = esperar("ID");
+
+            return nuevoNodo(
+                    "Identificador", "",
+                    token, 1
+            );
+
+        } else if (verificarToken("NUMERO")) {
+
+            String token = esperar("NUMERO");
+
+            NodoAST nodo = nuevoNodo("",
+                    "Numero",
+                    token, 1
+            );
+
+            agregarHijo(nodo, unidad());
+
+            return nodo;
+
+        } else if (verificarToken("CARGAR")) {
+
+            return cargar();
+        }
+
+        reportarError(
+                tokenActual(),
+                "CADENA, ID, NUMERO o CARGAR"
+        );
+
+        recuperarTermino();
+
+        return nuevoNodo("ErrorExpresion", "", "", 1);
+    }
+
+    // =====================================================
+    // <unidad>
+    // =====================================================
+    public NodoAST unidad() {
+
+        if (verificarToken("ID")) {
+
+            String token = esperar("ID");
+
+            return nuevoNodo("",
+                    "Unidad",
+                    token, 1
+            );
+        }
+
+        return nuevoNodo("Unidad", "", "", 1);
+    }
+
+    // =====================================================
+    // <cargar>
+    // =====================================================
+    public NodoAST cargar() {
+
+        esperar("CARGAR");
+
+        NodoAST nodo = nuevoNodo("Cargar", "", "CARGAR", 1);
+
+        esperar("PAR_A");
+
+        String ruta = esperar("CADENA");
+
+        agregarHijo(
+                nodo,
+                nuevoNodo("Ruta", "", ruta, 1)
+        );
+
+        esperar("PAR_C");
+
+        return nodo;
+    }
+
+    // =====================================================
+    // <ejecuciones>
+    // =====================================================
+    public NodoAST ejecuciones() {
+
+        NodoAST nodo = nuevoNodo("Ejecuciones", "", "", 1);
+
+        if (verificarToken("EJECUTAR")) {
+            agregarHijo(nodo, ejecucion());
+        } else {
+            reportarError(tokenActual(), "EJECUTAR");
+        }
+
+        while (verificarToken("EJECUTAR")) {
+
+            int posicionAnterior = posicionListaTokens;
+
+            agregarHijo(nodo, ejecucion());
+
+            if (posicionAnterior == posicionListaTokens) {
+                avanzar();
+            }
+        }
+
+        return nodo;
+    }
+
+    private NodoAST ejecucion() {
+
+        esperar("EJECUTAR");
+
+        String identificador = esperar("ID");
+
+        return nuevoNodo(
+                "Ejecucion",
+                identificador, "", 1
+        );
+    }
+
+    // =====================================================
+    // <exportar>
+    // =====================================================
+    public NodoAST exportar() {
+
+        NodoAST nodo = nuevoNodo("Exportar", "", "", 1);
+
+        esperar("EXPORTAR");
+
+        String identificador = esperar("ID");
+
+        agregarHijo(
+                nodo,
+                nuevoNodo(
+                        "Identificador", "",
+                        identificador, 1
+                )
+        );
+
+        while (verificarToken("COMA")) {
+
+            int posicionAnterior = posicionListaTokens;
+
+            esperar("COMA");
+
+            String id = esperar("ID");
+
+            agregarHijo(
+                    nodo,
+                    nuevoNodo(
+                            "Identificador", "",
+                            id, 1
+                    )
+            );
+
+            if (posicionAnterior == posicionListaTokens) {
+                avanzar();
+            }
+        }
+
+        return nodo;
+    }
+
+    // =====================================================
+    // RECUPERACIÓN DE ERRORES EN EXPRESIONES
+    // =====================================================
     private void recuperarTermino() {
+
         while (!verificarToken("EOF")
                 && !verificarToken("MAS")
                 && !verificarToken("FLECHA")
@@ -282,51 +554,6 @@ public class AnalizadorSintactico2 {
                 && !verificarToken("EXPORTAR")) {
 
             avanzar();
-        }
-    }
-
-    public void unidad() {
-        if (verificarToken("ID")) {
-            esperar("ID");
-        }
-    }
-
-    public void cargar() {
-        esperar("CARGAR");
-        esperar("PAR_A");
-        esperar("CADENA");
-        esperar("PAR_C");
-    }
-
-    public void ejecuciones() {
-        esperar("EJECUTAR");
-        esperar("ID");
-        mas_ejecuciones();
-    }
-
-    public void mas_ejecuciones() {
-        while (verificarToken("EJECUTAR")) {
-            int posicionAnterior = posicionListaTokens;
-
-            esperar("EJECUTAR");
-            esperar("ID");
-
-            if (posicionListaTokens == posicionAnterior) {
-                avanzar();
-            }
-        }
-    }
-
-    public void exportar() {
-        esperar("EXPORTAR");
-        esperar("ID");
-        mas_ids();
-    }
-
-    public void mas_ids() {
-        while (verificarToken("COMA")) {
-            esperar("COMA");
-            esperar("ID");
         }
     }
 }
