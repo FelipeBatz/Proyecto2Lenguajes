@@ -16,6 +16,10 @@ public class NodoAST {
         this.lexema = lexema;
     }
 
+    public String getTipoNodo() {
+        return "nodoNormal";
+    }
+
     public String getTipo() {
         return tipo;
     }
@@ -26,10 +30,6 @@ public class NodoAST {
 
     public int getFila() {
         return fila;
-    }
-
-    public void setFila(int fila) {
-        this.fila = fila;
     }
 
     public ListaEnlazada<NodoAST> getHijos() {
@@ -50,37 +50,54 @@ public class NodoAST {
         return lexema;
     }
 
+    public String getExpresion() {
+       return "";
+    }
+
+    public String getConectores() {
+      return "";
+    }
+
+    public String getDestino() {
+        return "";
+    }
+
     public static class PreguntarNodo extends NodoAST {
 
-        private final NodoAST expresion;
-        private final NodoAST conectores;
+        private String tipoComando;
+        private final String expresion;
+        private final String conectores;
         private final String destino;
 
-        public PreguntarNodo(
-                NodoAST expresion,
-                NodoAST conectores,
-                String destino) {
-
-            super("Preguntar", "asdf", "COMANDO_IA", 1);
-
+        public PreguntarNodo(String tipoComando, String expresion, String conectores, String destino, int fila) {
+            super(tipoComando, conectores, destino, fila);
             this.expresion = expresion;
             this.conectores = conectores;
             this.destino = destino;
+            this.tipoComando = tipoComando;
 
-            agregarHijo(expresion);
-            agregarHijo(conectores);
-
-            agregarHijo(new NodoAST("Destino", "asdfasd", destino, 1));
         }
 
-        public NodoAST getExpresion() {
+        @Override
+        public String getLexema() {
+            return tipoComando;
+        }
+
+        @Override
+        public String getTipoNodo() {
+            return "nodoComando";
+        }
+
+        @Override
+        public String getExpresion() {
             return expresion;
         }
 
-        public NodoAST getConectores() {
+        @Override
+        public String getConectores() {
             return conectores;
         }
-
+        @Override
         public String getDestino() {
             return destino;
         }

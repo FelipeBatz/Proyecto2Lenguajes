@@ -1,6 +1,7 @@
 package Frontent;
 
 import Backend.AnalizadorLexico;
+import Backend.AnalizadorSintactico2;
 import Backend.Colorear;
 import Backend.ListaEnlazada;
 import Backend.ListaEnlazadaException;
@@ -53,7 +54,6 @@ public class IDE2 extends JFrame {
     private File archivoActual;
     private boolean archivoModificado = false;
     private ListaEnlazada<Token> tokensReconocidos;
-    private String contenidoOriginal;
 
     public IDE2() {
         configurarVentana();
@@ -260,13 +260,6 @@ public class IDE2 extends JFrame {
         //editor de texto
         editor = new JTextPane();
         editor.setBackground(COLOR_EDITOR);
-        editor.addKeyListener(new KeyAdapter() {
-            @Override
-            public void keyReleased(KeyEvent e) {
-                System.out.println("estas presionando una tecla");
-                colorearTexto(editor.getText());
-            }
-        });
         editor.setForeground(COLOR_TEXTO);
         editor.setCaretColor(Color.WHITE);
         editor.setSelectionColor(new Color(45, 90, 130));
@@ -302,7 +295,7 @@ public class IDE2 extends JFrame {
         consola.setText("> PromptZal IDE iniciado.\n" + "> Listo para trabajar.\n");
 
         tablaTokens = crearAreaTexto();
-        tablaTokens.setText(encabezadoTokens());
+        tablaTokens.setText(encabezadoErroreLexicos());
 
         tablaErroresLexicos = crearAreaTexto();
         tablaErroresLexicos.setText("No hay errores Lexicos.\n");
@@ -423,7 +416,7 @@ public class IDE2 extends JFrame {
     }
 
     //Encabezado de la tabla tokens
-    private String encabezadoTokens() {
+    private String encabezadoErroreLexicos() {
         return String.format("%-5s %-75s %-25s %-8s %-8s%n", "No.", "Lexema", "Tipo", "Fila", "Col.")
                 + "---------------------------------------------------------------------------------------------------------------------------\n";
     }
@@ -484,14 +477,12 @@ public class IDE2 extends JFrame {
 
         try {
             String contenido = Files.readString(archivo.toPath(), StandardCharsets.UTF_8);
-            contenidoOriginal = contenido;
-            colorearTexto(contenido);
             archivoActual = archivo;
             archivoModificado = false;
             limpiarResultados();
             actualizarNombreArchivo();
             consola.append("> Archivo abierto: " + archivo.getName() + "\n");
-
+            editor.setText(contenido);
             actualizarEstado("Archivo abierto");
 
         } catch (IOException ex) {
@@ -543,7 +534,7 @@ public class IDE2 extends JFrame {
 
     // analizar archivo
     private void analizarArchivo() {
-        tablaTokens.setText(encabezadoTokens());
+        tablaTokens.setText(encabezadoErroreLexicos());
         String codigo = editor.getText();
 
         if (codigo.trim().isEmpty()) {
@@ -551,7 +542,7 @@ public class IDE2 extends JFrame {
             return;
         }
 
-        tablaTokens.setText(encabezadoTokens());
+        tablaTokens.setText(encabezadoErroreLexicos());
         tablaErroresLexicos.setText("");
 
         consola.append("\n");
@@ -567,10 +558,7 @@ public class IDE2 extends JFrame {
 
     }
 
-    private void compilarArchivo() {
-
-    }
-
+    /*
     private void colorearTexto(String contenido) {
         ListaEnlazada<Token> tokensColorear = new ListaEnlazada<>();
 
@@ -653,22 +641,23 @@ public class IDE2 extends JFrame {
             }
         }
     }
+     */
+    private void compilarArchivo() {
+        ejecutarAnalisisLexico();
+        ejecutarAnalisisSintactico();
+    }
 
     private void ejecutarAnalisisLexico() {
-        String codigo;
-        if (contenidoOriginal == null) {
-            codigo = editor.getText();
-        } else {
-            codigo = contenidoOriginal;
-        }
 
-        StringReader leer = new StringReader(codigo);
+        StringReader leer = new StringReader(editor.getText());
         AnalizadorLexico analizador = new AnalizadorLexico(leer);
         tokensReconocidos = new ListaEnlazada<>();
         try {
             Token tokenActual;
             while ((tokenActual = analizador.yylex()) != null) {
-                tokensReconocidos.agregarNuevo(tokenActual);
+                if (!tokenActual.getTipo().equals("COMENTARIO")) {
+                    tokensReconocidos.agregarNuevo(tokenActual);
+                }
 
             }
         } catch (Exception e) {
@@ -686,18 +675,38 @@ public class IDE2 extends JFrame {
                 System.out.println("Error al mostrar tokens en consola");
             }
         }
-        colorearTexto(codigo);
 
         if (analizador.obtenerErrores().length() == 0) {
             tablaErroresLexicos.setText("No hay errores Lexicos");
         } else {
-            tablaErroresLexicos.setText(analizador.obtenerErrores());
+            tablaErroresLexicos.setText("ERRORES LEXICOS REGISTRADOS:" + "\n" + analizador.obtenerErrores());
         }
+        //colorearTexto(editor.getText());
 
     }
 
-    private boolean ejecutarAnalisisSintactico() {
-        return true;
+    private void ejecutarAnalisisSintactico() {
+        tablaErroresSintacticos.setText("");
+        AnalizadorSintactico2 analizador = new AnalizadorSintactico2(tokensReconocidos);
+        analizador.analizar();
+        ListaEnlazada<String> listadoErroresSintacticos = analizador.getListaErrores();
+        tablaErroresSintacticos.append("ERRORES SINTACTICOS DETECTADOS: \n");
+
+        if (listadoErroresSintacticos.getTamañoLista() > 0) {
+
+            for (int i = 0; i < listadoErroresSintacticos.getTamañoLista(); i++) {
+                try {
+                    tablaErroresSintacticos.append(listadoErroresSintacticos.obtenerDatos(i) + "\n");
+                } catch (Exception e) {
+                }
+
+            }
+        } else {
+            tablaErroresSintacticos.setText("No hay errores Sintacticos.");
+        }
+
+        promptGenerado.setText(analizador.getPromptGenerado());
+
     }
 
     private boolean ejecutarAnalisisSemantico() {
@@ -758,7 +767,7 @@ public class IDE2 extends JFrame {
     private void limpiarResultados() {
 
         if (tablaTokens != null) {
-            tablaTokens.setText(encabezadoTokens());
+            tablaTokens.setText(encabezadoErroreLexicos());
         }
 
         if (promptGenerado != null) {
@@ -943,4 +952,5 @@ public class IDE2 extends JFrame {
             repaint();
         }
     }
+
 }

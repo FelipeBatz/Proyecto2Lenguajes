@@ -16,10 +16,12 @@ public class Main {
     private static StringBuilder errores;
 
     public static void main(String[] args) {
-        /*
+        
         IDE2 ide = new IDE2();
         ide.setVisible(true);
-         */
+         
+        
+        /*
         ListaEnlazada<Token> listadoTokens = new ListaEnlazada<>();
         ReporteTokens reporteTokens = new ReporteTokens();
         reporteTokens.crearReporte();
@@ -45,6 +47,6 @@ public class Main {
 
         AnalizadorSintactico2 analizador = new AnalizadorSintactico2(listadoTokens);
         analizador.analizar();
-
+        */
     }
 }

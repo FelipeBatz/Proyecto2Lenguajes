@@ -8,6 +8,12 @@ import java.nio.charset.StandardCharsets;
 
 public class ReporteASTHtml {
 
+    private ListaEnlazada<NodoAST> nodos;
+
+    public ReporteASTHtml() {
+        nodos = new ListaEnlazada<>();
+    }
+
     public void generar(NodoAST raiz, String ruta)
             throws IOException {
 
@@ -299,13 +305,15 @@ public class ReporteASTHtml {
         }
     }
 
-    private void escribirNodo(
-            BufferedWriter writer,
-            NodoAST nodo,
-            boolean esRaiz) throws IOException {
+    private void escribirNodo(BufferedWriter writer, NodoAST nodo, boolean esRaiz) throws IOException {
+
+        if (nodo.getTipoNodo().equals("nodoNomal")) {
+            System.out.println("es un nodo nomrla");
+        } else if (nodo.getTipoNodo().equals("nodoComando")) {
+            System.out.println("es un nodo comando");
+        }
 
         writer.write("<li>");
-
         writer.write("<div class='tarjeta");
 
         if (esRaiz) {
@@ -313,11 +321,9 @@ public class ReporteASTHtml {
         }
 
         writer.write("'>");
-
         writer.write("<strong>");
         writer.write(nodo.getTipo() + " " + nodo.getLexema());
         writer.write("</strong>");
-
         writer.write("<span class='tipo'>");
         writer.write("valor: " + nodo.getValor());
         writer.write("</span>");
@@ -329,61 +335,27 @@ public class ReporteASTHtml {
         } else {
             writer.write("<span class='linea'>Línea no registrada</span>");
         }
-
         writer.write("</div>");
 
         if (nodo.tieneHijos()) {
             writer.write("<ul>");
-
-            for (int i = 0;
-                    i < nodo.getHijos().getTamañoLista();
-                    i++) {
-
+            for (int i = 0; i < nodo.getHijos().getTamañoLista(); i++) {
                 try {
                     NodoAST hijo = nodo.getHijos().obtenerDatos(i);
-
                     escribirNodo(writer, hijo, false);
-
                 } catch (ListaEnlazadaException ex) {
-                    throw new IOException(
-                            "No se pudo recorrer el AST.", ex
-                    );
+                    throw new IOException("No se pudo recorrer el AST.", ex);
                 }
             }
-
             writer.write("</ul>");
         }
-
         writer.write("</li>");
+
+        nodos.agregarNuevo(nodo);
     }
 
-    private String etiqueta(NodoAST nodo) {
-
-        String tipo = nodo.getTipo();
-        String valor = nodo.getValor();
-
-        if (valor == null || valor.isEmpty()) {
-            return tipo;
-        }
-
-        if ("Programa".equals(tipo)) {
-            return "Programa";
-        }
-
-        return tipo + " " + valor;
+    public ListaEnlazada<NodoAST> getNodos() {
+        return nodos;
     }
 
-    private String escapar(String texto) {
-
-        if (texto == null) {
-            return "";
-        }
-
-        return texto
-                .replace("&", "&amp;")
-                .replace("<", "&lt;")
-                .replace(">", "&gt;")
-                .replace("\"", "&quot;")
-                .replace("'", "&#39;");
-    }
 }
