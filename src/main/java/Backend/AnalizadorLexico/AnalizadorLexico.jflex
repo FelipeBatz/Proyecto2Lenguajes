@@ -1,5 +1,7 @@
-package Backend;
+package Backend.AnalizadorLexico;
 import Backend.Token;
+import Backend.ListaEnlazadaGenerica.ListaEnlazada;
+
 
 %%
 %public
@@ -20,7 +22,8 @@ import Backend.Token;
     private StringBuilder cadenaCompleta = new StringBuilder();
     private int columnaCadena;
     private int columnaComentario;
-    private StringBuilder  errores = new StringBuilder();;
+    private StringBuilder  errores = new StringBuilder();
+    private ListaEnlazada<Token> erroresLista = new ListaEnlazada<>();
 
     public Token crearToken(String tipo) {
         noTokens++;
@@ -32,12 +35,18 @@ import Backend.Token;
         
         noErrores++;
         errores.append(noErrores + " | " + "Error, " + tipo + ", Lexema: " + lexema + ", Fila: " + (yyline + 1 ) + ", Columna: " + (yycolumn + 1) + "\n"); 
-        
+        Token error = new Token(noErrores,lexema, tipo, (yyline + 1 ), yycolumn);
+        erroresLista.agregarNuevo(error);
     }
 
     public String obtenerErrores(){
         System.out.println(errores.length());
         return errores.toString();
+    }
+
+    public ListaEnlazada<Token> obtenerListaErrores() {
+
+        return erroresLista;
     }
     
     

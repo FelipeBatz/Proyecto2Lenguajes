@@ -1,4 +1,6 @@
-package Backend;
+package Backend.AST;
+
+import Backend.ListaEnlazadaGenerica.ListaEnlazada;
 
 public class NodoAST {
 

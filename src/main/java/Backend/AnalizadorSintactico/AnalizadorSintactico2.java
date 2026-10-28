@@ -1,4 +1,12 @@
-package Backend;
+package Backend.AnalizadorSintactico;
+
+import Backend.GenerarPromptzal;
+import Backend.ListaEnlazadaGenerica.ListaEnlazada;
+import Backend.ListaEnlazadaGenerica.ListaEnlazadaException;
+import Backend.AST.NodoAST;
+import Backend.AST.ReporteASTHtml;
+import Backend.Token;
+import Backend.Reportes.ReporteErroresSintacticos;
 
 public class AnalizadorSintactico2 {
 
@@ -7,10 +15,9 @@ public class AnalizadorSintactico2 {
     private int posicionListaTokens;
     private NodoAST nodoInicial;
     private String promptGenerado;
-
     private final String[] TOKENS_SINCRONIZACION = {"AGENTE", "LLAVE_C", "COMANDO_IA", "VARIABLE", "EJECUTAR", "EXPORTAR", "EOF"};
-
     private NodoAST raizAST;
+    private ReporteErroresSintacticos erroresSintacticos;
 
     public AnalizadorSintactico2(ListaEnlazada<Token> listaTokens) {
         nodoInicial = nuevoNodo("Programa", "", "", 1);
@@ -18,6 +25,7 @@ public class AnalizadorSintactico2 {
         this.listaErrores = new ListaEnlazada<>();
         this.posicionListaTokens = 0;
         this.raizAST = null;
+        erroresSintacticos = new ReporteErroresSintacticos();
     }
 
     // =====================================================
@@ -29,9 +37,7 @@ public class AnalizadorSintactico2 {
             try {
                 return listaTokens.obtenerDatos(posicionListaTokens);
             } catch (ListaEnlazadaException ex) {
-                System.out.println(
-                        "Error al obtener el token actual."
-                );
+                System.out.println( "Error al obtener el token actual."  );
             }
         }
 
@@ -76,16 +82,10 @@ public class AnalizadorSintactico2 {
                 + ").";
 
         listaErrores.agregarNuevo(error);
+        erroresSintacticos.agregarError(esperado, token.getTipo(),token.getFila(),token.getColumna());
     }
 
-    /*
-     * Espera un token.
-     *
-     * Si lo encuentra, lo consume y lo devuelve.
-     * Si no lo encuentra, informa el error y busca
-     * el token esperado sin eliminar los tokens
-     * de sincronización.
-     */
+  
     private String esperar(String tipoEsperado) {
 
         if (verificarToken(tipoEsperado)) {
@@ -127,12 +127,12 @@ public class AnalizadorSintactico2 {
     // =====================================================
     // ANÁLISIS PRINCIPAL
     // =====================================================
-    public NodoAST analizar() {
+    public void analizar() {
         ReporteASTHtml reporte = new ReporteASTHtml();
         posicionListaTokens = 0;
         listaErrores = new ListaEnlazada<>();
         raizAST = null;
-
+        
         raizAST = programa();
         if (raizAST != null) {
             try {
@@ -164,9 +164,9 @@ public class AnalizadorSintactico2 {
         System.out.println("Análisis finalizado.");
 
         GenerarPromptzal promp = new GenerarPromptzal(reporte.getNodos());
-        promptGenerado = promp.generar();
-
-        return raizAST;
+        promptGenerado = promp.generar(); 
+        erroresSintacticos.generarReporte("ErroresSintacticos.html");
+        
     }
 
     public String getPromptGenerado() {

@@ -1,5 +1,8 @@
-package Backend;
+package Backend.AST;
 
+
+import Backend.ListaEnlazadaGenerica.ListaEnlazada;
+import Backend.ListaEnlazadaGenerica.ListaEnlazadaException;
 import java.io.BufferedWriter;
 import java.io.FileOutputStream;
 import java.io.OutputStreamWriter;

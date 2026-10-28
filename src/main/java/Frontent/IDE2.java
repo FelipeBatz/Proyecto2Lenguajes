@@ -1,10 +1,10 @@
 package Frontent;
 
-import Backend.AnalizadorLexico;
-import Backend.AnalizadorSintactico2;
+import Backend.AnalizadorLexico.AnalizadorLexico;
+import Backend.AnalizadorSintactico.AnalizadorSintactico2;
 import Backend.Colorear;
-import Backend.ListaEnlazada;
-import Backend.ListaEnlazadaException;
+import Backend.ListaEnlazadaGenerica.ListaEnlazada;
+import Backend.ListaEnlazadaGenerica.ListaEnlazadaException;
 import Backend.Token;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -14,14 +14,10 @@ import java.awt.*;
 import java.awt.event.*;
 import java.io.File;
 import java.io.IOException;
-import java.io.Reader;
 import java.io.StringReader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import javax.swing.text.BadLocationException;
-import javax.swing.text.Style;
-import javax.swing.text.StyleConstants;
-import javax.swing.text.StyledDocument;
+import Backend.Reportes.ReporteErroresLexicos;
 
 public class IDE2 extends JFrame {
 
@@ -295,7 +291,7 @@ public class IDE2 extends JFrame {
         consola.setText("> PromptZal IDE iniciado.\n" + "> Listo para trabajar.\n");
 
         tablaTokens = crearAreaTexto();
-        tablaTokens.setText(encabezadoErroreLexicos());
+        tablaTokens.setText(encabezadoTablaTokens());
 
         tablaErroresLexicos = crearAreaTexto();
         tablaErroresLexicos.setText("No hay errores Lexicos.\n");
@@ -416,7 +412,7 @@ public class IDE2 extends JFrame {
     }
 
     //Encabezado de la tabla tokens
-    private String encabezadoErroreLexicos() {
+    private String encabezadoTablaTokens() {
         return String.format("%-5s %-75s %-25s %-8s %-8s%n", "No.", "Lexema", "Tipo", "Fila", "Col.")
                 + "---------------------------------------------------------------------------------------------------------------------------\n";
     }
@@ -534,7 +530,7 @@ public class IDE2 extends JFrame {
 
     // analizar archivo
     private void analizarArchivo() {
-        tablaTokens.setText(encabezadoErroreLexicos());
+        tablaTokens.setText(encabezadoTablaTokens());
         String codigo = editor.getText();
 
         if (codigo.trim().isEmpty()) {
@@ -542,7 +538,7 @@ public class IDE2 extends JFrame {
             return;
         }
 
-        tablaTokens.setText(encabezadoErroreLexicos());
+        tablaTokens.setText(encabezadoTablaTokens());
         tablaErroresLexicos.setText("");
 
         consola.append("\n");
@@ -648,7 +644,7 @@ public class IDE2 extends JFrame {
     }
 
     private void ejecutarAnalisisLexico() {
-
+        tablaTokens.setText(encabezadoTablaTokens());
         StringReader leer = new StringReader(editor.getText());
         AnalizadorLexico analizador = new AnalizadorLexico(leer);
         tokensReconocidos = new ListaEnlazada<>();
@@ -681,6 +677,24 @@ public class IDE2 extends JFrame {
         } else {
             tablaErroresLexicos.setText("ERRORES LEXICOS REGISTRADOS:" + "\n" + analizador.obtenerErrores());
         }
+        ReporteErroresLexicos reporteErroresLexicos = new ReporteErroresLexicos();
+        
+        for (int i = 0; i < analizador.obtenerListaErrores().getTamañoLista(); i++) {
+            try {
+                reporteErroresLexicos.agregarError(
+                        analizador.obtenerListaErrores().obtenerDatos(i).getLexema(),
+                        analizador.obtenerListaErrores().obtenerDatos(i).getTipo(),
+                        analizador.obtenerListaErrores().obtenerDatos(i).getFila(),
+                        analizador.obtenerListaErrores().obtenerDatos(i).getColumna()
+                +1);
+            } catch (ListaEnlazadaException ex) {
+                System.out.println("Error al crear reporte erroes lexicos");
+            }
+            
+        }
+        reporteErroresLexicos.generarReporte("reporteErroesLexicos.html");
+        
+        
         //colorearTexto(editor.getText());
 
     }
@@ -706,6 +720,7 @@ public class IDE2 extends JFrame {
         }
 
         promptGenerado.setText(analizador.getPromptGenerado());
+        
 
     }
 
@@ -767,7 +782,7 @@ public class IDE2 extends JFrame {
     private void limpiarResultados() {
 
         if (tablaTokens != null) {
-            tablaTokens.setText(encabezadoErroreLexicos());
+            tablaTokens.setText(encabezadoTablaTokens());
         }
 
         if (promptGenerado != null) {

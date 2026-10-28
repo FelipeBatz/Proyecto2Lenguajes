@@ -4,6 +4,12 @@
  */
 package Backend;
 
+import Backend.ListaEnlazadaGenerica.ListaEnlazadaException;
+import Backend.ListaEnlazadaGenerica.ListaEnlazada;
+import Backend.AST.NodoAST;
+
+
+
 public class GenerarPromptzal {
 
     private ListaEnlazada<NodoAST> listaNodos;

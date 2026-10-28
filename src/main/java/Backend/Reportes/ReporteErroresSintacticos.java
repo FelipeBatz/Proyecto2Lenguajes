@@ -1,0 +1,271 @@
+/*
+ * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
+ * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
+ */
+package Backend.Reportes;
+
+
+
+import java.io.BufferedWriter;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.ArrayList;
+
+import java.util.List;
+
+import java.io.IOException;
+import java.io.BufferedWriter;
+import java.io.FileWriter;
+
+public class ReporteErroresSintacticos {
+
+    private static class ErrorSintactico { String esperado;  String encontrado;  int fila; int columna;
+
+        public ErrorSintactico( String esperado,  String encontrado,  int fila, int columna) {
+            this.esperado = esperado;
+            this.encontrado = encontrado;
+            this.fila = fila;
+            this.columna = columna;
+        }
+    }
+
+    private final List<ErrorSintactico> errores = new ArrayList<>();
+
+    // Agregar un error al reporte
+    public void agregarError(  String esperado, String encontrado,  int fila, int columna) {
+        errores.add(new ErrorSintactico(esperado, encontrado, fila, columna));
+    }
+
+    // Generar el archivo HTML
+    public void generarReporte(String rutaArchivo) {
+
+        try (BufferedWriter bw = new BufferedWriter(new FileWriter(rutaArchivo))) {
+
+            bw.write("""
+                <!DOCTYPE html>
+                <html lang="es">
+                <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>Reporte de errores sintácticos</title>
+
+                <style>
+                * {
+                    box-sizing: border-box;
+                }
+
+                body {
+                    margin: 0;
+                    padding: 35px;
+                    font-family: 'Segoe UI', Arial, sans-serif;
+                    background: #f1f5f9;
+                    color: #1e293b;
+                }
+
+                .contenedor {
+                    max-width: 1100px;
+                    margin: auto;
+                    background: white;
+                    border-radius: 16px;
+                    overflow: hidden;
+                    box-shadow: 0 10px 35px rgba(15,23,42,.08);
+                }
+
+                header {
+                    background: #172033;
+                    color: white;
+                    padding: 25px 30px;
+                }
+
+                header h1 {
+                    margin: 0 0 8px;
+                    font-size: 25px;
+                }
+
+                header p {
+                    color: #cbd5e1;
+                    margin: 0;
+                }
+
+                main {
+                    padding: 25px 30px;
+                }
+
+                .barra {
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    gap: 12px;
+                    margin-bottom: 20px;
+                }
+
+                .contador {
+                    background: #fee2e2;
+                    color: #b91c1c;
+                    padding: 8px 14px;
+                    border-radius: 20px;
+                    font-size: 13px;
+                    font-weight: 600;
+                }
+
+                .tabla-contenedor {
+                    overflow-x: auto;
+                    border: 1px solid #e2e8f0;
+                    border-radius: 10px;
+                }
+
+                table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    text-align: left;
+                }
+
+                thead {
+                    background: #e8eef5;
+                }
+
+                th {
+                    padding: 16px;
+                    color: #334155;
+                    font-size: 13px;
+                    white-space: nowrap;
+                }
+
+                td {
+                    padding: 15px 16px;
+                    border-top: 1px solid #e2e8f0;
+                    font-size: 14px;
+                }
+
+                tbody tr:nth-child(even) {
+                    background: #f8fafc;
+                }
+
+                tbody tr:hover {
+                    background: #eff6ff;
+                }
+
+                .esperado {
+                    color: #0f766e;
+                    font-weight: 600;
+                }
+
+                .encontrado {
+                    color: #b91c1c;
+                    font-weight: 600;
+                }
+
+                .vacio {
+                    text-align: center;
+                    padding: 35px;
+                    color: #64748b;
+                }
+
+                footer {
+                    padding: 18px 30px;
+                    border-top: 1px solid #e2e8f0;
+                    color: #64748b;
+                    font-size: 12px;
+                }
+
+                @media (max-width: 600px) {
+                    body {
+                        padding: 12px;
+                    }
+
+                    main {
+                        padding: 18px;
+                    }
+
+                    header {
+                        padding: 22px;
+                    }
+                }
+                </style>
+                </head>
+
+                <body>
+                <div class="contenedor">
+
+                <header>
+                    <h1>Reporte de errores sintácticos</h1>
+                    <p>Errores detectados durante el análisis del programa</p>
+                </header>
+
+                <main>
+                    <div class="barra">
+                        <h2>Listado de errores</h2>
+                        <span class="contador">
+                """);
+
+            bw.write(errores.size()+ (errores.size() == 1 ? " error" : " errores"));
+            bw.write("""
+                        </span>
+                    </div>
+
+                    <div class="tabla-contenedor">
+                    <table>
+                    <thead>
+                    <tr>
+                        <th>No.</th>
+                        <th>Se esperaba</th>
+                        <th>Se encontró</th>
+                        <th>Fila</th>
+                        <th>Columna</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                """);
+
+            if (errores.isEmpty()) { bw.write("""
+                    <tr>
+                        <td colspan="5" class="vacio">
+                            No hay errores sintácticos registrados.
+                        </td>
+                    </tr>
+                    """);
+            } else {
+                int numero = 1;
+                for (ErrorSintactico error : errores) {
+                    bw.write("<tr>");
+                    bw.write("<td>" + numero++ + "</td>");
+                    bw.write("<td class='esperado'>" + escaparHTML(error.esperado)+ "</td>");
+                    bw.write("<td class='encontrado'>"  + escaparHTML(error.encontrado) + "</td>");
+                    bw.write("<td>" + error.fila + "</td>");
+                    bw.write("<td>" + error.columna + "</td>");
+                    bw.write("</tr>\n");
+                }
+            }
+
+            bw.write("""
+                    </tbody>
+                    </table>
+                    </div>
+                </main>
+
+                <footer>
+                    Reporte generado por el analizador sintáctico.
+                </footer>
+
+                </div>
+                </body>
+                </html>
+                """);
+
+            System.out.println(   "Reporte generado correctamente: " + rutaArchivo);
+
+        } catch (IOException e) {
+            System.err.println(   "Error al generar el reporte: " + e.getMessage());
+        }
+    }
+
+    // Evitar que caracteres especiales rompan el HTML
+    private String escaparHTML(String texto) {
+        if (texto == null) {
+            return "";
+        }
+
+        return texto.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;") .replace("'", "&#39;");
+    }
+
+}

@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Reporte de Errores</title>
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            background: #f4f6f8;
+            padding: 40px;
+            color: #2c3e50;
+        }
+
+        .contenedor {
+            max-width: 1100px;
+            margin: auto;
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.10);
+        }
+
+        .titulo {
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 32px;
+            color: #1f3c88;
+        }
+
+        .descripcion {
+            text-align: center;
+            color: #7f8c8d;
+            margin-bottom: 30px;
+        }
+
+        .tabla-contenedor {
+            overflow-x: auto;
+            border-radius: 10px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            overflow: hidden;
+        }
+
+        thead {
+            background: #1f3c88;
+            color: white;
+        }
+
+        th {
+            padding: 15px;
+            text-align: center;
+            font-size: 15px;
+        }
+
+        td {
+            padding: 13px;
+            text-align: center;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        tbody tr:hover {
+            background: #eef4ff;
+        }
+
+        tbody tr:nth-child(even) {
+            background: #f8f9fc;
+        }
+
+        .numero {
+            font-weight: bold;
+            color: #1f3c88;
+        }
+
+        .lexema {
+            font-family: monospace;
+            background: #f1f3f5;
+            padding: 5px 8px;
+            border-radius: 5px;
+        }
+
+        .tipo {
+            font-weight: bold;
+            color: #c0392b;
+        }
+
+        .pie {
+            margin-top: 25px;
+            text-align: right;
+            color: #7f8c8d;
+            font-size: 14px;
+        }
+
+    </style>
+</head>
+
+<body>
+
+    <div class="contenedor">
+
+        <h1 class="titulo">Reporte de Errores</h1>
+
+        <p class="descripcion">
+            Errores encontrados durante el análisis léxico
+        </p>
+
+        <div class="tabla-contenedor">
+
+            <table>
+
+                <thead>
+                    <tr>
+                        <th>No. Error</th>
+                        <th>Lexema</th>
+                        <th>Tipo</th>
+                        <th>Fila</th>
+                        <th>Columna</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                </tbody>
+
+            </table>
+
+        </div>
+
+        <div class="pie">
+
+            </strong>
+        </div>
+
+    </div>
+
+</body>
+</html>
