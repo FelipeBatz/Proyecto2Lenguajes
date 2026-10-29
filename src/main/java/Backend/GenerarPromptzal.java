@@ -39,8 +39,6 @@ public class GenerarPromptzal {
                     prompGenerado.append("\n    ##Agente: " + listaNodos.obtenerDatos(i).getValor() + "\n");
                     generarPromptAgentes(i);
                 }
-                System.out.println(listaNodos.obtenerDatos(i).getValor());
-
             } catch (ListaEnlazadaException ex) {
                 System.getLogger(GenerarPromptzal.class.getName()).log(System.Logger.Level.ERROR, (String) null, ex);
             }
@@ -50,13 +48,13 @@ public class GenerarPromptzal {
         generarPromptComandos();
         generarPromptResultado();
         
-        System.out.println(prompGenerado.toString());
+     
         return prompGenerado.toString();
 
     }
 
     public void generarPromptAgentes(int limiteFinal) {
-        System.out.println("asdasd " + limiteFinal);
+       
         int contador = 0;
         for (int i = limiteInicial; i < limiteFinal; i++) {
             contador++;

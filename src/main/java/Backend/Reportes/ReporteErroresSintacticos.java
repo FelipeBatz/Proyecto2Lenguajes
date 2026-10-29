@@ -6,9 +6,6 @@ package Backend.Reportes;
 
 
 
-import java.io.BufferedWriter;
-import java.io.FileWriter;
-import java.io.IOException;
 import java.util.ArrayList;
 
 import java.util.List;
@@ -19,24 +16,16 @@ import java.io.FileWriter;
 
 public class ReporteErroresSintacticos {
 
-    private static class ErrorSintactico { String esperado;  String encontrado;  int fila; int columna;
-
-        public ErrorSintactico( String esperado,  String encontrado,  int fila, int columna) {
-            this.esperado = esperado;
-            this.encontrado = encontrado;
-            this.fila = fila;
-            this.columna = columna;
-        }
-    }
+    
 
     private final List<ErrorSintactico> errores = new ArrayList<>();
 
-    // Agregar un error al reporte
+    
     public void agregarError(  String esperado, String encontrado,  int fila, int columna) {
         errores.add(new ErrorSintactico(esperado, encontrado, fila, columna));
     }
 
-    // Generar el archivo HTML
+
     public void generarReporte(String rutaArchivo) {
 
         try (BufferedWriter bw = new BufferedWriter(new FileWriter(rutaArchivo))) {
@@ -252,20 +241,30 @@ public class ReporteErroresSintacticos {
                 </html>
                 """);
 
-            System.out.println(   "Reporte generado correctamente: " + rutaArchivo);
+          
 
         } catch (IOException e) {
             System.err.println(   "Error al generar el reporte: " + e.getMessage());
         }
     }
 
-    // Evitar que caracteres especiales rompan el HTML
+
     private String escaparHTML(String texto) {
         if (texto == null) {
             return "";
         }
 
         return texto.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;") .replace("'", "&#39;");
+    }
+    
+    private static class ErrorSintactico { String esperado;  String encontrado;  int fila; int columna;
+
+        public ErrorSintactico( String esperado,  String encontrado,  int fila, int columna) {
+            this.esperado = esperado;
+            this.encontrado = encontrado;
+            this.fila = fila;
+            this.columna = columna;
+        }
     }
 
 }

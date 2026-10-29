@@ -1,4 +1,4 @@
-package Backend.AnalizadorSintactico;
+package Backend.Analizadores;
 
 import Backend.GenerarPromptzal;
 import Backend.ListaEnlazadaGenerica.ListaEnlazada;
@@ -7,6 +7,7 @@ import Backend.AST.NodoAST;
 import Backend.AST.ReporteASTHtml;
 import Backend.Token;
 import Backend.Reportes.ReporteErroresSintacticos;
+import Backend.Simbolo;
 
 public class AnalizadorSintactico2 {
 
@@ -18,6 +19,10 @@ public class AnalizadorSintactico2 {
     private final String[] TOKENS_SINCRONIZACION = {"AGENTE", "LLAVE_C", "COMANDO_IA", "VARIABLE", "EJECUTAR", "EXPORTAR", "EOF"};
     private NodoAST raizAST;
     private ReporteErroresSintacticos erroresSintacticos;
+    private ListaEnlazada<Simbolo> listaSimbolos;
+    private boolean existeAgente;
+    private String agenteActual;
+    private ListaEnlazada<NodoAST> listadoNodos;
 
     public AnalizadorSintactico2(ListaEnlazada<Token> listaTokens) {
         nodoInicial = nuevoNodo("Programa", "", "", 1);
@@ -26,18 +31,15 @@ public class AnalizadorSintactico2 {
         this.posicionListaTokens = 0;
         this.raizAST = null;
         erroresSintacticos = new ReporteErroresSintacticos();
+        listaSimbolos = new ListaEnlazada<>();
     }
 
-    // =====================================================
-    // MÉTODOS GENERALES
-    // =====================================================
     private Token tokenActual() {
-
         if (posicionListaTokens < listaTokens.getTamañoLista()) {
             try {
                 return listaTokens.obtenerDatos(posicionListaTokens);
             } catch (ListaEnlazadaException ex) {
-                System.out.println( "Error al obtener el token actual."  );
+                System.out.println("Error al obtener el token actual.");
             }
         }
 
@@ -49,20 +51,17 @@ public class AnalizadorSintactico2 {
     }
 
     private void avanzar() {
-        if (posicionListaTokens < listaTokens.getTamañoLista()
-                && !verificarToken("EOF")) {
+        if (posicionListaTokens < listaTokens.getTamañoLista() && !verificarToken("EOF")) {
             posicionListaTokens++;
         }
     }
 
     private boolean esTokenSincronizacion(String tipo) {
-
         for (String token : TOKENS_SINCRONIZACION) {
             if (token.equals(tipo)) {
                 return true;
             }
         }
-
         return false;
     }
 
@@ -82,10 +81,9 @@ public class AnalizadorSintactico2 {
                 + ").";
 
         listaErrores.agregarNuevo(error);
-        erroresSintacticos.agregarError(esperado, token.getTipo(),token.getFila(),token.getColumna());
+        erroresSintacticos.agregarError(esperado, token.getTipo(), token.getFila(), token.getColumna());
     }
 
-  
     private String esperar(String tipoEsperado) {
 
         if (verificarToken(tipoEsperado)) {
@@ -96,12 +94,12 @@ public class AnalizadorSintactico2 {
 
         reportarError(tokenActual(), tipoEsperado);
 
-        while (!verificarToken("EOF")
-                && !verificarToken(tipoEsperado)
-                && !esTokenSincronizacion(
-                        tokenActual().getTipo())) {
-
+        while (!verificarToken("EOF") && !verificarToken(tipoEsperado) && !esTokenSincronizacion(tokenActual().getTipo())) {
             avanzar();
+
+            if (verificarToken("AGENTE")) {
+                existeAgente = true;
+            }
         }
 
         if (verificarToken(tipoEsperado)) {
@@ -114,59 +112,36 @@ public class AnalizadorSintactico2 {
 
     }
 
-    private NodoAST nuevoNodo(String tipo, String lexema, String valor, int fila) {
-        return new NodoAST(tipo, lexema, valor, fila);
-    }
+    
 
-    private void agregarHijo(NodoAST padre, NodoAST hijo) {
-        if (padre != null && hijo != null) {
-            padre.agregarHijo(hijo);
-        }
-    }
-
-    // =====================================================
-    // ANÁLISIS PRINCIPAL
-    // =====================================================
     public void analizar() {
         ReporteASTHtml reporte = new ReporteASTHtml();
         posicionListaTokens = 0;
         listaErrores = new ListaEnlazada<>();
         raizAST = null;
-        
+
         raizAST = programa();
         if (raizAST != null) {
             try {
 
                 reporte.generar(raizAST, "reporteAST.html");
-                System.out.println("Reporte AST generado: reporteAST.html");
 
             } catch (java.io.IOException ex) {
                 System.out.println("Error al generar el HTML: " + ex.getMessage());
             }
         }
 
-        System.out.println("====== ERRORES ======");
-
-        if (listaErrores.getTamañoLista() > 0) {
-
-            for (int i = 0; i < listaErrores.getTamañoLista(); i++) {
-
-                try {
-                    System.out.println(listaErrores.obtenerDatos(i));
-                } catch (ListaEnlazadaException ex) {
-                    System.out.println("Error al mostrar errores.");
-                }
-            }
-
-        } else {
-            System.out.println("No se encontraron errores sintácticos.");
-        }
-        System.out.println("Análisis finalizado.");
-
         GenerarPromptzal promp = new GenerarPromptzal(reporte.getNodos());
-        promptGenerado = promp.generar(); 
+        listadoNodos = reporte.getNodos();
+        promptGenerado = promp.generar();
         erroresSintacticos.generarReporte("ErroresSintacticos.html");
+
         
+
+    }
+    
+    public ListaEnlazada<NodoAST> getListadoNodos() {
+        return listadoNodos;
     }
 
     public String getPromptGenerado() {
@@ -181,11 +156,7 @@ public class AnalizadorSintactico2 {
         return listaErrores;
     }
 
-    // =====================================================
-    // <programa>
-    // =====================================================
     private NodoAST programa() {
-
         directivas();
         agentes();
         ejecuciones();
@@ -194,9 +165,6 @@ public class AnalizadorSintactico2 {
         return nodoInicial;
     }
 
-    // =====================================================
-    // <directivas>
-    // =====================================================
     private void directivas() {
         while (verificarToken("DIRECTIVA")) {
             int posicionAnterior = posicionListaTokens;
@@ -225,10 +193,19 @@ public class AnalizadorSintactico2 {
     }
 
     private void agente() {
-        int filaActual = tokenActual().getFila();
+        if (verificarToken("AGENTE")) {
+            existeAgente = true;
+        }
+
         String lexema = esperar("AGENTE");
         String id = esperar("ID");
-        NodoAST nodo = nuevoNodo("", lexema, id, filaActual);
+        agenteActual = id;
+        NodoAST nodo = nuevoNodo("", lexema, id, tokenActual().getFila());
+        int filaActual = tokenActual().getFila();
+        if (existeAgente) {
+            Simbolo simbolo = new Simbolo(id, "AGENTE", "Todo el programa", filaActual);
+            listaSimbolos.agregarNuevo(simbolo);
+        }
         agregarHijo(nodoInicial, nodo);
         esperar("LLAVE_A");
         contexto(nodo);
@@ -236,11 +213,10 @@ public class AnalizadorSintactico2 {
         comandos(nodo);
         esperar("LLAVE_C");
 
+        existeAgente = false;
+
     }
 
-    // =====================================================
-    // <contexto>
-    // =====================================================
     private void contexto(NodoAST nodopadre) {
         int filaActual = tokenActual().getFila();
         esperar("CONTEXTO");
@@ -250,11 +226,7 @@ public class AnalizadorSintactico2 {
         agregarHijo(nodopadre, nodo);
     }
 
-    // =====================================================
-    // <variables>
-    // =====================================================
     private void variables(NodoAST nodoPadre) {
-
         while (verificarToken("VARIABLE")) {
             int filaActual = tokenActual().getFila();
             int posicionAnterior = posicionListaTokens;
@@ -265,27 +237,28 @@ public class AnalizadorSintactico2 {
             variables(nodoPadre);
             NodoAST nodo = nuevoNodo("VARIABLE", id, expresion, filaActual);
             agregarHijo(nodoPadre, nodo);
+            Simbolo simbolo = new Simbolo(id, "VARIABLE", "Dentro de " + agenteActual, filaActual);
+            listaSimbolos.agregarNuevo(simbolo);
 
             if (posicionAnterior == posicionListaTokens) {
                 avanzar();
             }
         }
-
     }
 
     private void comandos(NodoAST nodoPadre) {
-        comando(nodoPadre);
+        comando(nodoPadre, agenteActual);
         mas_comandos(nodoPadre);
 
     }
 
     private void mas_comandos(NodoAST nodoPadre) {
         while (verificarToken("COMANDO_IA")) {
-            comando(nodoPadre);
+            comando(nodoPadre, agenteActual);
         }
     }
 
-    private void comando(NodoAST nodoPadre) {
+    private void comando(NodoAST nodoPadre, String agente) {
         int filaActual = tokenActual().getFila();
         int posicionAnterior = posicionListaTokens;
         String tipoComando = esperar("COMANDO_IA");
@@ -293,6 +266,9 @@ public class AnalizadorSintactico2 {
         String conector = conectores();
         esperar("FLECHA");
         String id = esperar("ID");
+        Simbolo simbolo = new Simbolo(id, "VARIABLE", "Dentro de " + agenteActual, filaActual);
+        listaSimbolos.agregarNuevo(simbolo);
+
         NodoAST.PreguntarNodo preguntarNodo = new NodoAST.PreguntarNodo(tipoComando, expresion, conector, id, filaActual);
         agregarHijo(nodoPadre, preguntarNodo);
         if (posicionAnterior == posicionListaTokens) {
@@ -309,52 +285,6 @@ public class AnalizadorSintactico2 {
         return expresion;
     }
 
-    /*
-    private void expresion() {
-        termino();
-        mas_terminos();
-    }
-    
-    private void mas_terminos() {
-        while(verificarToken("MAS")){
-            esperar("MAS");
-            termino();
-        }
-    }
-    
-    private void termino() {
-        if (verificarToken("CADENA")) {
-            esperar("CADENA");
-
-        } else if (verificarToken("ID")) {
-            esperar("ID");
-
-        } else if (verificarToken("NUMERO")) {
-            esperar("NUMERO");
-            unidad();
-
-        } else if (verificarToken("CARGAR")) {
-            cargar();
-
-        } else {
-            esperar("CADENA, ID, NUMERO o CARGAR");
-        }
-    }
-    
-    private void unidad() {
-        if (verificarToken("ID")) {
-            esperar("ID");
-        }
-    }
-    
-    private void cargar() {
-
-        esperar("CARGAR");
-        esperar("PAR_A");
-        esperar("CADENA");
-        esperar("PAR_C");
-    }
-     */
     private String expresion() {
         StringBuilder terminos = new StringBuilder();
         String termino = termino();
@@ -377,18 +307,16 @@ public class AnalizadorSintactico2 {
     public String termino() {
         if (verificarToken("CADENA")) {
             String cadena = esperar("CADENA");
-            System.out.println(cadena);
             return cadena;
 
         } else if (verificarToken("ID")) {
             String id = esperar("ID");
-            System.out.println(id);
             return id;
 
         } else if (verificarToken("NUMERO")) {
             String numero = esperar("NUMERO");
             String id = unidad();
-            System.out.println(numero + id);
+
             return numero + " " + id;
 
         } else if (verificarToken("CARGAR")) {
@@ -464,11 +392,22 @@ public class AnalizadorSintactico2 {
         return masIDS.toString();
     }
 
+    public ListaEnlazada<Simbolo> getListadoSimbolos() {
+        return listaSimbolos;
+    }
+    
+    private NodoAST nuevoNodo(String tipo, String lexema, String valor, int fila) {
+        return new NodoAST(tipo, lexema, valor, fila);
+    }
+
+    private void agregarHijo(NodoAST padre, NodoAST hijo) {
+        if (padre != null && hijo != null) {
+            padre.agregarHijo(hijo);
+        }
+    }
+
     private void recuperarTermino() {
-        while (!verificarToken("EOF")
-                && !verificarToken("MAS")
-                && !verificarToken("FLECHA")
-                && !verificarToken("CONECTOR")
+        while (!verificarToken("EOF") && !verificarToken("MAS") && !verificarToken("FLECHA") && !verificarToken("CONECTOR")
                 && !verificarToken("LLAVE_C")
                 && !verificarToken("VARIABLE")
                 && !verificarToken("COMANDO_IA")

@@ -1,10 +1,11 @@
 package Frontent;
 
-import Backend.AnalizadorLexico.AnalizadorLexico;
-import Backend.AnalizadorSintactico.AnalizadorSintactico2;
-import Backend.Colorear;
+import Backend.Analizadores.AnalizadorLexico;
+import Backend.Analizadores.AnalizadorSemantico;
+import Backend.Analizadores.AnalizadorSintactico2;
 import Backend.ListaEnlazadaGenerica.ListaEnlazada;
 import Backend.ListaEnlazadaGenerica.ListaEnlazadaException;
+import Backend.Reportes.ReporteTabla;
 import Backend.Token;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -18,6 +19,7 @@ import java.io.StringReader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import Backend.Reportes.ReporteErroresLexicos;
+import Backend.Reportes.ReporteErroresSemanticos;
 
 public class IDE2 extends JFrame {
 
@@ -38,6 +40,7 @@ public class IDE2 extends JFrame {
     private JTextArea tablaTokens;
     private JTextArea tablaErroresLexicos;
     private JTextArea tablaErroresSintacticos;
+    private JTextArea tablaErroresSemanticos;
     private JTextArea promptGenerado;
     private JLabel lblArchivo;
     private JLabel lblEstado;
@@ -219,8 +222,7 @@ public class IDE2 extends JFrame {
         archivos.setLayout(new BoxLayout(archivos, BoxLayout.Y_AXIS));
         archivos.setBackground(COLOR_PANEL);
 
-        JLabel proyecto = new JLabel(
-                "PROMPTZAL");
+        JLabel proyecto = new JLabel( "PROMPTZAL");
         proyecto.setForeground(COLOR_TEXTO);
         proyecto.setFont(new Font("Segoe UI", Font.BOLD, 13));
 
@@ -299,12 +301,16 @@ public class IDE2 extends JFrame {
         tablaErroresSintacticos = crearAreaTexto();
         tablaErroresSintacticos.setText("No hay errores sintacticos.\n");
 
+        tablaErroresSemanticos = crearAreaTexto();
+        tablaErroresSemanticos.setText("No hay errores Semanticos.\n");
+
         JPanel panelPrompt = crearPanelPrompt();
 
         tabsInferior.addTab("CONSOLA", new JScrollPane(consola));
         tabsInferior.addTab("TOKENS", new JScrollPane(tablaTokens));
         tabsInferior.addTab("ERRORES LEXICOS", new JScrollPane(tablaErroresLexicos));
         tabsInferior.addTab("ERRORES SINTACTICOS", new JScrollPane(tablaErroresSintacticos));
+        tabsInferior.addTab("ERRORES SEMANTICOS", new JScrollPane(tablaErroresSemanticos));
         tabsInferior.addTab("PROMPTZAL GENERADO", panelPrompt);
 
         panel.add(tabsInferior, BorderLayout.CENTER);
@@ -436,6 +442,10 @@ public class IDE2 extends JFrame {
 
     //crear un nuevo archivo
     private void nuevoArchivo() {
+        consola.setText("""
+                       > PromptZal IDE iniciado. \n
+                       > Listo para trabajar.""");
+        
         if (archivoModificado) {
             int respuesta = JOptionPane.showConfirmDialog(
                     this,
@@ -639,8 +649,15 @@ public class IDE2 extends JFrame {
     }
      */
     private void compilarArchivo() {
+        consola.append("\n");
+        consola.append("============================================\n");
+        consola.append("           COMPILANDO \n");
+        consola.append("============================================\n");
+        
         ejecutarAnalisisLexico();
         ejecutarAnalisisSintactico();
+        
+        consola.append("> compilación finalizada");
     }
 
     private void ejecutarAnalisisLexico() {
@@ -678,7 +695,7 @@ public class IDE2 extends JFrame {
             tablaErroresLexicos.setText("ERRORES LEXICOS REGISTRADOS:" + "\n" + analizador.obtenerErrores());
         }
         ReporteErroresLexicos reporteErroresLexicos = new ReporteErroresLexicos();
-        
+
         for (int i = 0; i < analizador.obtenerListaErrores().getTamañoLista(); i++) {
             try {
                 reporteErroresLexicos.agregarError(
@@ -686,20 +703,19 @@ public class IDE2 extends JFrame {
                         analizador.obtenerListaErrores().obtenerDatos(i).getTipo(),
                         analizador.obtenerListaErrores().obtenerDatos(i).getFila(),
                         analizador.obtenerListaErrores().obtenerDatos(i).getColumna()
-                +1);
+                        + 1);
             } catch (ListaEnlazadaException ex) {
                 System.out.println("Error al crear reporte erroes lexicos");
             }
-            
+
         }
         reporteErroresLexicos.generarReporte("reporteErroesLexicos.html");
-        
-        
-        //colorearTexto(editor.getText());
 
+        //colorearTexto(editor.getText());
     }
 
     private void ejecutarAnalisisSintactico() {
+        ReporteTabla reporteTablaSimbolos = new ReporteTabla();
         tablaErroresSintacticos.setText("");
         AnalizadorSintactico2 analizador = new AnalizadorSintactico2(tokensReconocidos);
         analizador.analizar();
@@ -707,25 +723,60 @@ public class IDE2 extends JFrame {
         tablaErroresSintacticos.append("ERRORES SINTACTICOS DETECTADOS: \n");
 
         if (listadoErroresSintacticos.getTamañoLista() > 0) {
-
-            for (int i = 0; i < listadoErroresSintacticos.getTamañoLista(); i++) {
-                try {
+            try {
+                for (int i = 0; i < listadoErroresSintacticos.getTamañoLista(); i++) {
                     tablaErroresSintacticos.append(listadoErroresSintacticos.obtenerDatos(i) + "\n");
-                } catch (Exception e) {
                 }
 
+            } catch (Exception e) {
+                System.out.println("Error al registrar errores");
             }
+
         } else {
             tablaErroresSintacticos.setText("No hay errores Sintacticos.");
         }
 
         promptGenerado.setText(analizador.getPromptGenerado());
+
+        try {
+            for (int i = 0; i < analizador.getListadoSimbolos().getTamañoLista(); i++) {
+
+                reporteTablaSimbolos.agregarDato(analizador.getListadoSimbolos().obtenerDatos(i).getNombre(),
+                        analizador.getListadoSimbolos().obtenerDatos(i).getQueEs(),
+                        analizador.getListadoSimbolos().obtenerDatos(i).getDondeExiste(),
+                        analizador.getListadoSimbolos().obtenerDatos(i).getLinea());
+            }
+            reporteTablaSimbolos.guardarHTML("reporteTablaSimbolos.html");
+        } catch (ListaEnlazadaException e) {
+            System.out.println("Error al generar la tabla de simbolos");
+        } catch (IOException ex) {
+            System.out.println("Error al generar la tabla de simbolos");
+        }
+
+        
+        ReporteErroresSemanticos reporteErroresSemanticos = new ReporteErroresSemanticos();
+        
+        AnalizadorSemantico analizadorSemantico = new AnalizadorSemantico(analizador.getListadoSimbolos(), analizador.getListadoNodos());
+        analizadorSemantico.analizar();
+        if (analizadorSemantico.getListaErrores().getTamañoLista() > 0) {
+            tablaErroresSemanticos.setText("ERRORES SEMANTICOS DETECTADOS: \n");
+            try {
+                for (int i = 0; i < analizadorSemantico.getListaErrores().getTamañoLista(); i++) {
+                    tablaErroresSemanticos.append(analizadorSemantico.getListaErrores().obtenerDatos(i) + "\n");
+                    reporteErroresSemanticos.agregarError(analizadorSemantico.getListaErrores().obtenerDatos(i));
+                }
+            } catch (Exception e) {
+            }
+        }else {
+            tablaErroresSemanticos.setText("No hay errores semanticos.");
+        }
+        reporteErroresSemanticos.generarReporte("reporteErroresSemanticos.html");
         
 
     }
 
-    private boolean ejecutarAnalisisSemantico() {
-        return true;
+    private void ejecutarAnalisisSemantico() {
+
     }
 
     private String generarPrompt() {

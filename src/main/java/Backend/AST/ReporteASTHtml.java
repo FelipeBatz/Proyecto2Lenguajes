@@ -1,6 +1,5 @@
 package Backend.AST;
 
-
 import Backend.ListaEnlazadaGenerica.ListaEnlazada;
 import Backend.ListaEnlazadaGenerica.ListaEnlazadaException;
 import java.io.BufferedWriter;
@@ -309,12 +308,6 @@ public class ReporteASTHtml {
     }
 
     private void escribirNodo(BufferedWriter writer, NodoAST nodo, boolean esRaiz) throws IOException {
-
-        if (nodo.getTipoNodo().equals("nodoNomal")) {
-            System.out.println("es un nodo nomrla");
-        } else if (nodo.getTipoNodo().equals("nodoComando")) {
-            System.out.println("es un nodo comando");
-        }
 
         writer.write("<li>");
         writer.write("<div class='tarjeta");

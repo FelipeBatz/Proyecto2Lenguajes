@@ -4,8 +4,6 @@
  */
 package Backend.Reportes;
 
-
-
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -14,43 +12,17 @@ import java.util.List;
 
 public class ReporteErroresLexicos {
 
-    private static class ErrorLexico {
-        String lexema;
-        String tipo;
-        int fila;
-        int columna;
-
-        public ErrorLexico(
-                String lexema,
-                String tipo,
-                int fila,
-                int columna) {
-
-            this.lexema = lexema;
-            this.tipo = tipo;
-            this.fila = fila;
-            this.columna = columna;
-        }
-    }
+    
 
     private final List<ErrorLexico> errores = new ArrayList<>();
 
-    // Agregar un error léxico al reporte
-    public void agregarError(
-            String lexema,
-            String tipo,
-            int fila,
-            int columna) {
-
-        errores.add(new ErrorLexico(
-                lexema, tipo, fila, columna));
+    public void agregarError(String lexema, String tipo, int fila, int columna) {
+        errores.add(new ErrorLexico(lexema, tipo, fila, columna));
     }
 
-    // Generar el archivo HTML
     public void generarReporte(String rutaArchivo) {
 
-        try (BufferedWriter bw =
-                new BufferedWriter(new FileWriter(rutaArchivo))) {
+        try (BufferedWriter bw = new BufferedWriter(new FileWriter(rutaArchivo))) {
 
             bw.write("""
                 <!DOCTYPE html>
@@ -212,10 +184,7 @@ public class ReporteErroresLexicos {
                         <span class="contador">
                 """);
 
-            bw.write(errores.size()
-                    + (errores.size() == 1
-                    ? " error léxico"
-                    : " errores léxicos"));
+            bw.write(errores.size() + (errores.size() == 1 ? " error léxico" : " errores léxicos"));
 
             bw.write("""
                         </span>
@@ -281,29 +250,32 @@ public class ReporteErroresLexicos {
                 </html>
                 """);
 
-            System.out.println(
-                    "Reporte generado correctamente: " + rutaArchivo);
-
         } catch (IOException e) {
-            System.err.println(
-                    "Error al generar el reporte: " + e.getMessage());
+            System.err.println("Error al generar el reporte: " + e.getMessage());
         }
     }
 
-    // Escapar caracteres especiales para evitar HTML incorrecto
     private String escaparHTML(String texto) {
         if (texto == null) {
             return "";
         }
 
-        return texto
-                .replace("&", "&amp;")
-                .replace("<", "&lt;")
-                .replace(">", "&gt;")
-                .replace("\"", "&quot;")
-                .replace("'", "&#39;");
+        return texto.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;").replace("'", "&#39;");
+    }
+    
+    private class ErrorLexico {
+
+        String lexema;
+        String tipo;
+        int fila;
+        int columna;
+
+        public ErrorLexico(String lexema, String tipo, int fila, int columna) {
+            this.lexema = lexema;
+            this.tipo = tipo;
+            this.fila = fila;
+            this.columna = columna;
+        }
     }
 
- 
-    
 }
